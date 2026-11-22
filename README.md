@@ -33,6 +33,18 @@ Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, 
 - [x] External scene files
 - [ ] Mirror reflection, transparency, textures, bump, more shapes, …
 
+## Branches
+
+| Branch | Role |
+|--------|------|
+| `main` | Stable / defence-ready |
+| `develop` | Integration — merge features here first |
+| `test` | Experiments / WIP checks |
+
+Flow: `test` → `develop` → `main`. Local and GitHub stay in sync (push after every commit).
+
+Roadmap: [TODO.md](./TODO.md)
+
 ## Team
 
 - [@pix3l-p33p3r](https://github.com/pix3l-p33p3r)
