@@ -21,7 +21,7 @@ Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, 
 
 - [x] Ray tracing + window
 - [x] Sphere, plane, cylinder
-- [ ] Cone
+- [x] Cone (`cn` — same args as `cy`)
 - [x] Translation / rotation
 - [x] Camera from scene file
 - [ ] Expose / redraw without full recompute

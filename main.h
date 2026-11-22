@@ -31,6 +31,7 @@ enum
 	SPHERE = 1,
 	PLANE = 2,
 	CYLINDER = 3,
+	CONE = 4,
 };
 
 typedef struct s_vector
@@ -301,7 +302,10 @@ t_vector		compute_color(t_vars *vars, t_info *info, t_ray *camera_ray);
 t_vector		specular_highlight(t_info *info, t_vars *vars,
 					t_ray *camera_ray);
 int				test_cylinder(t_ray *ray, t_info *info);
+int				test_cone(t_ray *ray, t_info *info);
 int				calculate_props(int min_index, t_vector *poi,
+					t_info *info, t_vector *vhat);
+int				cone_calculate_props(int min_index, t_vector *poi,
 					t_info *info, t_vector *vhat);
 
 void			calculate_light_intensity(t_info *info, t_vars *vars,

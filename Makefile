@@ -48,7 +48,9 @@ SRCS = 	./parsing/miniRT.c\
 		Material/specular.c \
 		Objects/Cylinder.c \
  		Objects/Cylinder_utils.c \
-		main.c 
+		Objects/Cone.c \
+		Objects/Cone_utils.c \
+		main.c
 
 OBJS = $(SRCS:.c=.o)
 
@@ -61,9 +63,14 @@ $(NAME) : $(OBJS)
 	make -C ./libft -j4
 	$(CC) $(CFLAGS) $(OBJS) ./libft/libft.a $(LDFLAGS) -o $(NAME)
 
+test_cone:
+	$(CC) $(CFLAGS) -o tests/test_cone_quad tests/test_cone_quad.c -lm
+	./tests/test_cone_quad
+
 clean :
 	make clean -C ./libft
 	rm -rf $(OBJS)
+	rm -f tests/test_cone_quad
 
 fclean : clean
 	make fclean -C ./libft
@@ -71,4 +78,4 @@ fclean : clean
 
 re : fclean all
 
-.PHONY : all clean fclean re
+.PHONY : all clean fclean re test_cone

@@ -4,6 +4,7 @@
 rt
 miniRT
 miniRTbonus
+tests/test_cone_quad
 
 # editor / OS
 .DS_Store

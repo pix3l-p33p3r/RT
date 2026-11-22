@@ -24,7 +24,7 @@ Legend: `[x]` already in mini-RT base · `[ ]` still to build · `[~]` partial /
 | **Plane** | [x] | |
 | **Sphere** | [x] | |
 | **Cylinder** | [x] | |
-| **Cone** | [ ] | **missing** — add hit + parse `cn` |
+| **Cone** | [x] | unit cone `x²+y²=z²`, parse `cn` (same layout as `cy`) |
 | Translation | [x] | GTFM / `set_transform` |
 | Rotation | [x] | |
 | Camera pos + direction easy to change | [x] | via `.rt` `C` |
@@ -123,7 +123,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
 ## 5. Suggested build order
 
-1. [ ] Cone + `cn` parsing + scene with 4 shapes  
+1. [x] Cone + `cn` parsing + scene with 4 shapes  
 2. [ ] Expose / buffer blit (no full re-trace)  
 3. [ ] Scenes VI.1 / VI.2 / VI.3 + Valgrind pass  
 4. [ ] Recursive reflection  
