@@ -17,6 +17,7 @@
 # include <stdlib.h>
 # include <math.h>
 # include <limits.h>
+# include <pthread.h>
 # include "libft/libft.h"
 # define MAXFLOAT 3.40282346638528859811704183484516925e+38F
 # define M_PI 3.14159265358979323846
@@ -143,6 +144,9 @@ typedef struct s_vars
 	int				len;
 	int				pos1;
 	int				len1;
+	int				use_gpu;
+	int				gpu_ok;
+	void			*gpu;
 }	t_vars;
 
 typedef struct s_norm
@@ -233,8 +237,14 @@ typedef struct s_norm6
 unsigned int	rand_pcg(unsigned int *rng_state);
 float			random_float(unsigned int *rng_state, float min, float max);
 void			initialize_raytrace(t_vars *vars, t_norm1 *norm);
-void			process_pixel(t_vars *vars, t_norm1 *norm);
+void			process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng);
+void			raytrace_rows(t_vars *vars, int y0, int y1, unsigned int rng,
+					float xfact, float yfact);
+void			threaded_raytrace(t_vars *vars);
 void			raytrace(t_vars *vars);
+int				gpu_init(t_vars *vars);
+void			gpu_shutdown(t_vars *vars);
+int				gpu_raytrace(t_vars *vars);
 t_matrix		*create_matrix(int rows, int cols);
 int				loop(t_vars *vars);
 int				test_intersection(t_ray *ray, t_object *objects, t_info *info);

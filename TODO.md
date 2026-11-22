@@ -83,8 +83,8 @@ Still to implement for a solid options pack:
 
 ### Exotic / 125 fuel (subject + “unlisted” eval points)
 
-- [ ] Multithreading / faster render
-- [ ] GPU compute (CUDA/OpenCL/compute shaders — allowed for perf)
+- [x] **Multithreading (pthread)** — row bands across `nproc` threads (default path)
+- [x] **GPU compute (OpenCL)** — `RT_USE_GPU=1`; needs ICD (`mesa-opencl-icd` / `intel-opencl-icd`). Falls back to threads if no device.
 - [ ] Distributed render over multiple machines
 - [ ] Quadrics / quartics
 - [ ] Video clips from your frames
@@ -106,7 +106,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 3. [ ] Textures + bump  
 4. [ ] ≥3 extra shapes (disk, torus, cube/pyramid, …)  
 5. [ ] Parallel light + negative/CSG or composed solids  
-6. [ ] Threads (or GPU) + live camera/object controls  
+6. [ ] Threads + GPU + live camera/object controls  
 7. [ ] Defence pack: 8–12 polished `.rt` scenes, one feature each  
 
 ---
@@ -126,12 +126,13 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 1. [x] Cone + `cn` parsing + scene with 4 shapes  
 2. [x] Expose / buffer blit (no full re-trace)  
 3. [~] Scenes VI.1 / VI.2 / VI.3 added — Valgrind pass still open  
-4. [ ] Recursive reflection  
-5. [ ] Transparency + shadow through glass  
-6. [ ] Textures + bump  
-7. [ ] Extra shapes + parallel light  
-8. [ ] Threads + live controls  
-9. [ ] Bonus polish until 125 demos feel undeniable  
+4. [x] **pthread row workers**  
+5. [x] **OpenCL GPU path** (enable with `RT_USE_GPU=1` + ICD)  
+6. [ ] Recursive reflection  
+7. [ ] Transparency + shadow through glass  
+8. [ ] Textures + bump  
+9. [ ] Extra shapes + parallel light  
+10. [ ] Bonus polish until 125 demos feel undeniable  
 
 ---
 

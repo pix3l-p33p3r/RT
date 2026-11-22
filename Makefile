@@ -16,7 +16,9 @@ CC = cc
 CFLAGS = -Wall -Wextra -Werror 
 CFLAGS += -Ofast
 # CFLAGS += -fsanitize=address -fsanitize=leak -g3 
-LDFLAGS = -lmlx -lm -lXext -lX11 -lz
+LDFLAGS = -lmlx -lm -lXext -lX11 -lz -pthread -lOpenCL
+LDFLAGS += -L./third_party/OpenCL/lib -Wl,-rpath,./third_party/OpenCL/lib
+CFLAGS += -I./third_party/OpenCL
 
 SRCS = 	./parsing/miniRT.c\
 	  	./parsing/check_elements.c\
@@ -50,6 +52,8 @@ SRCS = 	./parsing/miniRT.c\
  		Objects/Cylinder_utils.c \
 		Objects/Cone.c \
 		Objects/Cone_utils.c \
+		Parallel/threads.c \
+		gpu/cl_render.c \
 		main.c
 
 OBJS = $(SRCS:.c=.o)

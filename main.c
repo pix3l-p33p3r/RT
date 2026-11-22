@@ -13,6 +13,7 @@
 #include "main.h"
 #include "libft/libft.h"
 #include "parsing/miniRT.h"
+#include <string.h>
 
 int	loop(t_vars *vars)
 {
@@ -43,6 +44,8 @@ int	main(int ac, char **av)
 	vars = (t_vars){0};
 	if (ac != 2 || check_extention(av[1]) == 1)
 		return (1);
+	vars.use_gpu = (getenv("RT_USE_GPU")
+			&& strcmp(getenv("RT_USE_GPU"), "1") == 0);
 	vars.pos = 0;
 	vars.len = 100;
 	vars.objects = ft_calloc(vars.len + 1, sizeof(t_object));
@@ -57,6 +60,7 @@ int	main(int ac, char **av)
 	vars.win = mlx_new_window(vars.mlx, WIDTH, HEIGHT, "rt");
 	vars.mlx_img = new_mlx_img(&vars);
 	vars.frames = 0;
+	gpu_init(&vars);
 	mlx_loop_hook(vars.mlx, loop, &vars);
 	mlx_hook(vars.win, 2, 1L << 0, key_hook, &vars);
 	mlx_hook(vars.win, 12, 1L << 15, expose_hook, &vars);

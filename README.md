@@ -11,7 +11,13 @@ make
 ./rt scenes/scene1.rt
 ```
 
-Needs miniLibX (`-lmlx -lXext -lX11`) and `-lm`.
+Needs miniLibX (`-lmlx -lXext -lX11`), `-lm`, `-pthread`, and `-lOpenCL`.
+
+### Perf
+
+- **CPU threads (default):** row-parallel pthread raytrace  
+- **GPU OpenCL:** `RT_USE_GPU=1 ./rt scenes/cone_demo.rt`  
+  Install an ICD first, e.g. `mesa-opencl-icd` or `intel-opencl-icd` (no CUDA on this box).
 
 ## Status
 

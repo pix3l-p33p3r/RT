@@ -39,10 +39,10 @@ void	initialize_raytrace(t_vars *vars, t_norm1 *norm)
 	norm->intfound = 0;
 }
 
-void	process_pixel(t_vars *vars, t_norm1 *norm)
+void	process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng)
 {
-	norm->xoff = random_float(&vars->rng_state, -0.5, 0.5);
-	norm->yoff = random_float(&vars->rng_state, -0.5, 0.5);
+	norm->xoff = random_float(rng, -0.5, 0.5);
+	norm->yoff = random_float(rng, -0.5, 0.5);
 	norm->normx = ((float)(norm->x + norm->xoff) * norm->xfact) - 1.0;
 	norm->normy = ((float)(norm->y + norm->yoff) * norm->yfact) - 1.0;
 	norm->ray = generate_ray(norm->normx, norm->normy, &vars->camera);
@@ -58,15 +58,25 @@ void	process_pixel(t_vars *vars, t_norm1 *norm)
 	}
 }
 
-void	raytrace(t_vars *vars)
+void	raytrace_rows(t_vars *vars, int y0, int y1, unsigned int rng,
+		float xfact, float yfact)
 {
 	t_norm1	norm;
 
-	initialize_raytrace(vars, &norm);
-	while (++norm.y < HEIGHT)
+	norm.xfact = xfact;
+	norm.yfact = yfact;
+	norm.y = y0 - 1;
+	while (++norm.y < y1)
 	{
 		norm.x = -1;
 		while (++norm.x < WIDTH)
-			process_pixel(vars, &norm);
+			process_pixel(vars, &norm, &rng);
 	}
+}
+
+void	raytrace(t_vars *vars)
+{
+	if (vars->use_gpu && vars->gpu_ok && gpu_raytrace(vars))
+		return ;
+	threaded_raytrace(vars);
 }
