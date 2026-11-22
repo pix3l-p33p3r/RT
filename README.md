@@ -1,0 +1,39 @@
+# RT
+
+42 **Ray Tracer** in C — forked from [mini-RT](https://github.com/pix3l-p33p3r/mini-RT).
+
+Executable: `rt`
+
+## Build
+
+```bash
+make
+./rt scenes/scene1.rt
+```
+
+Needs miniLibX (`-lmlx -lXext -lX11`) and `-lm`.
+
+## Status
+
+Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, `.rt` scenes).
+
+### Mandatory checklist
+
+- [x] Ray tracing + window
+- [x] Sphere, plane, cylinder
+- [ ] Cone
+- [x] Translation / rotation
+- [x] Camera from scene file
+- [ ] Expose / redraw without full recompute
+- [x] Brightness, shadows, multi-spot, shine
+
+### Options (grade lives here)
+
+- [x] Ambient light
+- [x] External scene files
+- [ ] Mirror reflection, transparency, textures, bump, more shapes, …
+
+## Team
+
+- [@pix3l-p33p3r](https://github.com/pix3l-p33p3r)
+- [@0xakhii](https://github.com/0xakhii)

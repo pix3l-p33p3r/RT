@@ -1,0 +1,18 @@
+# build
+*.o
+*.a
+rt
+miniRT
+miniRTbonus
+
+# editor / OS
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
+
+# local reference / subject (not part of submission tree)
+mini-RT/
+rt.en.subject.pdf
+rt_subject.txt
