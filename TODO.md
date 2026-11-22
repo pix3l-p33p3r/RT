@@ -38,9 +38,9 @@ Legend: `[x]` already in mini-RT base · `[ ]` still to build · `[~]` partial /
 
 ### Mandatory demo scenes (subject strongly advises)
 
-- [ ] **Fig VI.1** — 4 basics (incl. cone), 2 spots, shadows + shine
-- [ ] **Fig VI.2** — same scene, other camera
-- [ ] **Fig VI.3** — shadow mixing
+- [x] **Fig VI.1** — `scenes/vi1_four_shapes.rt`
+- [x] **Fig VI.2** — `scenes/vi2_other_view.rt`
+- [x] **Fig VI.3** — `scenes/vi3_shadow_mix.rt`
 
 ---
 
@@ -125,7 +125,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
 1. [x] Cone + `cn` parsing + scene with 4 shapes  
 2. [x] Expose / buffer blit (no full re-trace)  
-3. [ ] Scenes VI.1 / VI.2 / VI.3 + Valgrind pass  
+3. [~] Scenes VI.1 / VI.2 / VI.3 added — Valgrind pass still open  
 4. [ ] Recursive reflection  
 5. [ ] Transparency + shadow through glass  
 6. [ ] Textures + bump  
