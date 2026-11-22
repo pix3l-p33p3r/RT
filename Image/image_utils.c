@@ -41,14 +41,21 @@ void	my_mlx_put_pixel(t_data *img, int x, int y, unsigned int color)
 	*(unsigned int *)dst = color;
 }
 
+void	blit_frame(t_vars *vars)
+{
+	if (!vars->mlx_img || !vars->mlx_img->img)
+		return ;
+	mlx_put_image_to_window(vars->mlx, vars->win, vars->mlx_img->img, 0, 0);
+}
+
 void	render(t_vars *vars)
 {
 	int				x;
 	int				y;
-	t_data			*data;
 	unsigned int	final_color;
 
-	data = new_mlx_img(vars);
+	if (!vars->mlx_img)
+		vars->mlx_img = new_mlx_img(vars);
 	y = 0;
 	while (y < HEIGHT)
 	{
@@ -57,12 +64,10 @@ void	render(t_vars *vars)
 		{
 			final_color = rgb_to_int(vars->image->red[y][x],
 					vars->image->green[y][x], vars->image->blue[y][x]);
-			my_mlx_put_pixel(data, x, y, final_color);
+			my_mlx_put_pixel(vars->mlx_img, x, y, final_color);
 			x++;
 		}
 		y++;
 	}
-	mlx_put_image_to_window(vars->mlx, vars->win, data->img, 0, 0);
-	mlx_destroy_image(vars->mlx, data->img);
-	free(data);
+	blit_frame(vars);
 }

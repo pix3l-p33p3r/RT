@@ -5,11 +5,11 @@ alwaysApply: true
 
 # Git sync + branches
 
-- After every commit on this project: **push** to `origin` immediately (`git push -u` if needed).
+- After every task commit: push **`develop`**, then fast-forward promote **`test`**, then **`main`** (`develop → test → main`). Never leave those three out of sync after a finished task.
 - Never leave local commits unpushed unless push fails — then report the error.
 - Branches:
   - `main` — stable / defence-ready
-  - `develop` — integration
-  - `test` — experiments / WIP
-- Default feature work: branch from `develop`, merge back to `develop`, then promote to `main` when stable.
+  - `develop` — integration (default work branch)
+  - `test` — experiments / WIP checks
+- Default feature work: on `develop`. Promote to `test` then `main` after each completed task.
 - Do not force-push `main` or `develop` unless the user explicitly asks.

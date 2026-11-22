@@ -130,6 +130,7 @@ typedef struct s_vars
 {
 	void			*mlx;
 	void			*win;
+	t_data			*mlx_img;
 	t_camera		camera;
 	t_image			*image;
 	t_object		*objects;
@@ -289,6 +290,8 @@ t_image			*new_image(void);
 void			delete_image(t_image *image);
 void			set_pixel(t_image *image, int x, int y, t_vector color);
 t_data			*new_mlx_img(t_vars *vars);
+void			blit_frame(t_vars *vars);
+int				expose_hook(t_vars *vars);
 
 // objects
 void			raytrace(t_vars *vars);

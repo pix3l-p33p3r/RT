@@ -28,7 +28,7 @@ Legend: `[x]` already in mini-RT base · `[ ]` still to build · `[~]` partial /
 | Translation | [x] | GTFM / `set_transform` |
 | Rotation | [x] | |
 | Camera pos + direction easy to change | [x] | via `.rt` `C` |
-| Redraw **without** full recalculate (e.g. Expose) | [ ] | **missing** — blit buffer / MLX expose |
+| Redraw **without** full recalculate (e.g. Expose) | [x] | persistent `mlx_img` + Expose hook blits only |
 | Light brightness | [x] | |
 | Shadows | [x] | |
 | Multi-spot | [x] | light array + bonus RGB lights |
@@ -124,7 +124,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 ## 5. Suggested build order
 
 1. [x] Cone + `cn` parsing + scene with 4 shapes  
-2. [ ] Expose / buffer blit (no full re-trace)  
+2. [x] Expose / buffer blit (no full re-trace)  
 3. [ ] Scenes VI.1 / VI.2 / VI.3 + Valgrind pass  
 4. [ ] Recursive reflection  
 5. [ ] Transparency + shadow through glass  

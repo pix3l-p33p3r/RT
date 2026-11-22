@@ -30,6 +30,12 @@ int	key_hook(int keycode)
 	return (keycode);
 }
 
+int	expose_hook(t_vars *vars)
+{
+	blit_frame(vars);
+	return (0);
+}
+
 int	main(int ac, char **av)
 {
 	t_vars	vars;
@@ -48,9 +54,11 @@ int	main(int ac, char **av)
 	vars.buffer_img = calloc(WIDTH * HEIGHT, sizeof(t_vector));
 	vars.mlx = mlx_init();
 	vars.win = mlx_new_window(vars.mlx, WIDTH, HEIGHT, "rt");
+	vars.mlx_img = new_mlx_img(&vars);
 	vars.frames = 0;
 	mlx_loop_hook(vars.mlx, loop, &vars);
 	mlx_hook(vars.win, 2, 1L << 0, key_hook, &vars);
+	mlx_hook(vars.win, 12, 1L << 15, expose_hook, &vars);
 	mlx_hook(vars.win, 17, 1L << 0, (void *)exit, &vars);
 	mlx_loop(vars.mlx);
 	free(vars.objects);

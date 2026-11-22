@@ -24,7 +24,7 @@ Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, 
 - [x] Cone (`cn` — same args as `cy`)
 - [x] Translation / rotation
 - [x] Camera from scene file
-- [ ] Expose / redraw without full recompute
+- [x] Expose / redraw without full recompute
 - [x] Brightness, shadows, multi-spot, shine
 
 ### Options (grade lives here)
@@ -41,7 +41,7 @@ Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, 
 | `develop` | Integration — merge features here first |
 | `test` | Experiments / WIP checks |
 
-Flow: `test` → `develop` → `main`. Local and GitHub stay in sync (push after every commit).
+Flow: work on `develop` → promote `test` → promote `main` after **each** finished task.
 
 Roadmap: [TODO.md](./TODO.md)
 
