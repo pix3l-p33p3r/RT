@@ -1,0 +1,15 @@
+---
+description: Keep GitHub in sync; use main/develop/test
+alwaysApply: true
+---
+
+# Git sync + branches
+
+- After every commit on this project: **push** to `origin` immediately (`git push -u` if needed).
+- Never leave local commits unpushed unless push fails — then report the error.
+- Branches:
+  - `main` — stable / defence-ready
+  - `develop` — integration
+  - `test` — experiments / WIP
+- Default feature work: branch from `develop`, merge back to `develop`, then promote to `main` when stable.
+- Do not force-push `main` or `develop` unless the user explicitly asks.
