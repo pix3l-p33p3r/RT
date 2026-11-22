@@ -16,6 +16,7 @@ void	check_sphere(t_vars *var, char *line, int i)
 {
 	t_object	obj;
 
+	obj = (t_object){0};
 	i += 2;
 	obj.type = SPHERE;
 	obj.translation = parse_vector(line, &i);
@@ -42,6 +43,7 @@ void	check_plane(t_vars *var, char *line, int i)
 {
 	t_object	obj;
 
+	obj = (t_object){0};
 	i += 2;
 	obj.type = PLANE;
 	obj.translation = parse_vector(line, &i);
@@ -59,6 +61,10 @@ void	check_plane(t_vars *var, char *line, int i)
 	obj.has_material = 1;
 	obj.shininess = 5;
 	obj.reflectivity = 0.5;
+	obj.rotation = (t_vector){0, 0, 0};
+	obj.scale = (t_vector){1, 1, 1};
+	/* gtfm is the object-list sentinel in raytrace loops; plane hit ignores it */
+	obj.gtfm = set_transform(obj.translation, obj.rotation, obj.scale);
 	obj.hit = test_plane;
 	add_object(var, obj);
 	free(line);
@@ -79,6 +85,7 @@ void	check_cylinder(t_vars *var, char *line, int i)
 {
 	t_object	obj;
 
+	obj = (t_object){0};
 	i += 2;
 	obj.type = CYLINDER;
 	obj.translation = parse_vector(line, &i);
@@ -115,6 +122,7 @@ void	check_cone(t_vars *var, char *line, int i)
 {
 	t_object	obj;
 
+	obj = (t_object){0};
 	i += 2;
 	obj.type = CONE;
 	obj.translation = parse_vector(line, &i);

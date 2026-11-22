@@ -40,6 +40,7 @@ int	main(int ac, char **av)
 {
 	t_vars	vars;
 
+	vars = (t_vars){0};
 	if (ac != 2 || check_extention(av[1]) == 1)
 		return (1);
 	vars.pos = 0;
