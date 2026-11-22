@@ -17,3 +17,4 @@ tests/test_cone_quad
 mini-RT/
 rt.en.subject.pdf
 rt_subject.txt
+*.deb
