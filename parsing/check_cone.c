@@ -6,11 +6,53 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/23 00:28:00 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/23 00:36:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 01:58:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "miniRT.h"
+
+static void	parse_ppm_path(t_object *obj, char *line, int *i)
+{
+	int		start;
+	int		end;
+	char	*path;
+
+	*i = skip_space(line, *i);
+	if (!line[*i])
+		return ;
+	start = *i;
+	while (line[*i] && line[*i] != ' ' && line[*i] != '\t' && line[*i] != '\n')
+		(*i)++;
+	end = *i;
+	path = ft_substr(line, start, end - start);
+	if (path)
+	{
+		obj->tex = load_ppm(path);
+		free(path);
+	}
+	*i = skip_space(line, *i);
+}
+
+static void	parse_surface_mat(t_object *obj, char *line, int *i)
+{
+	*i = skip_space(line, *i);
+	if (line[*i])
+	{
+		obj->pattern = (int)parse_number(line, i);
+		check_numbers((float)obj->pattern, 0.0f, 4.0f);
+	}
+	*i = skip_space(line, *i);
+	if (line[*i])
+	{
+		obj->bump = parse_number(line, i);
+		check_numbers(obj->bump, 0.0f, 2.0f);
+	}
+	if (obj->pattern == PAT_PPM)
+		parse_ppm_path(obj, line, i);
+	if (line[*i])
+		unexpected_error(line, *i);
+}
 
 void	parse_optional_mat(t_object *obj, char *line, int *i)
 {
@@ -35,8 +77,7 @@ void	parse_optional_mat(t_object *obj, char *line, int *i)
 		obj->ior = parse_number(line, i);
 		check_numbers(obj->ior, 1.0f, 3.0f);
 	}
-	if (line[*i])
-		unexpected_error(line, *i);
+	parse_surface_mat(obj, line, i);
 }
 
 static void	check_cn_continue(t_object *obj)

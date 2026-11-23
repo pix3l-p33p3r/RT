@@ -34,6 +34,7 @@ SRCS = 	./parsing/miniRT.c\
 		./parsing/check_objects.c\
 		./parsing/check_cone.c\
 		./parsing/check_extra.c\
+		./parsing/check_shapes2.c\
 		./parsing/myatoi.c\
 		vector.c \
 		vector1.c \
@@ -41,6 +42,7 @@ SRCS = 	./parsing/miniRT.c\
 		camera.c \
 		Image/image.c \
 		Image/image_utils.c \
+		Image/export_ppm.c \
 		Transformation/init_matrix.c \
 		Transformation/transfor_matrix.c\
 		Matrix/init.c \
@@ -57,17 +59,23 @@ SRCS = 	./parsing/miniRT.c\
 		Material/specular.c \
 		Material/reflect.c \
 		Material/refract.c \
+		Material/surface.c \
+		Material/ppm.c \
 		Objects/Cylinder.c \
  		Objects/Cylinder_utils.c \
 		Objects/Cone.c \
 		Objects/Cone_utils.c \
 		Objects/Triangle.c \
 		Objects/HalfSphere.c \
+		Objects/Disk.c \
+		Objects/Paraboloid.c \
 		Parallel/threads.c \
 		gpu/cl_init.c \
 		gpu/cl_setup.c \
 		gpu/cl_scene.c \
+		gpu/cl_camera.c \
 		gpu/cl_render.c \
+		controls.c \
 		cleanup.c \
 		main.c
 
@@ -94,10 +102,18 @@ test_refract:
 	$(CC) $(CFLAGS) -o tests/test_refract tests/test_refract.c -lm
 	./tests/test_refract
 
+test_surface:
+	$(CC) $(CFLAGS) -o tests/test_surface tests/test_surface.c -lm
+	./tests/test_surface
+
+test_shapes2:
+	$(CC) $(CFLAGS) -o tests/test_shapes2 tests/test_shapes2.c -lm
+	./tests/test_shapes2
+
 clean :
 	make clean -C ./libft
 	rm -rf $(OBJS)
-	rm -f tests/test_cone_quad tests/test_reflect tests/test_refract
+	rm -f tests/test_cone_quad tests/test_reflect tests/test_refract tests/test_surface tests/test_shapes2
 
 fclean : clean
 	make fclean -C ./libft
@@ -105,4 +121,4 @@ fclean : clean
 
 re : fclean all
 
-.PHONY : all clean fclean re test_cone test_reflect test_refract
+.PHONY : all clean fclean re test_cone test_reflect test_refract test_surface test_shapes2

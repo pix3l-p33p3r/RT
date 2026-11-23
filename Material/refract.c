@@ -65,9 +65,22 @@ t_ray	build_refract_ior(t_info *info, t_ray *in_ray, float ior)
 	return (new_ray(orig, add_vec(orig, refr)));
 }
 
-static t_vector	mul_vec(t_vector a, t_vector b)
+static void	init_shadow_ray(t_norm4 *norm, t_light *light, t_info *info)
 {
-	return (new_vec(a.x * b.x, a.y * b.y, a.z * b.z));
+	t_vector	start;
+
+	if (light->is_dir)
+	{
+		norm->lighdir = light->position;
+		norm->lighdist = MAXFLOAT;
+	}
+	else
+	{
+		norm->lighdir = normalized(sub_vec(light->position, info->hitpoint));
+		norm->lighdist = length(sub_vec(light->position, info->hitpoint));
+	}
+	start = add_vec(info->hitpoint, scale_vec(norm->lighdir, 0.001f));
+	norm->light_ray = new_ray(start, add_vec(start, norm->lighdir));
 }
 
 t_vector	shadow_atten(t_light *light, t_object *objects, t_info *info)
@@ -77,10 +90,7 @@ t_vector	shadow_atten(t_light *light, t_object *objects, t_info *info)
 	t_vector	atten;
 	int			i;
 
-	norm.lighdir = normalized(sub_vec(light->position, info->hitpoint));
-	norm.lighdist = length(sub_vec(light->position, info->hitpoint));
-	norm.light_ray = new_ray(add_vec(info->hitpoint,
-				scale_vec(norm.lighdir, 0.001f)), light->position);
+	init_shadow_ray(&norm, light, info);
 	atten = new_vec(1.0f, 1.0f, 1.0f);
 	i = -1;
 	while (objects[++i].gtfm)
@@ -92,8 +102,12 @@ t_vector	shadow_atten(t_light *light, t_object *objects, t_info *info)
 			continue ;
 		if (objects[i].transp <= 0.0f)
 			return (new_vec(0.0f, 0.0f, 0.0f));
-		atten = mul_vec(atten, scale_vec(glass_tint(objects[i].base_color),
-					objects[i].transp));
+		atten = new_vec(atten.x * glass_tint(objects[i].base_color).x
+				* objects[i].transp,
+				atten.y * glass_tint(objects[i].base_color).y
+				* objects[i].transp,
+				atten.z * glass_tint(objects[i].base_color).z
+				* objects[i].transp);
 	}
 	return (atten);
 }

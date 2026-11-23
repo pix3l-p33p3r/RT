@@ -36,7 +36,25 @@ enum
 	CONE = 4,
 	TRIANGLE = 5,
 	HALF_SPHERE = 6,
+	DISK = 7,
+	PARABOLOID = 8,
 };
+
+enum
+{
+	PAT_NONE = 0,
+	PAT_CHECKER = 1,
+	PAT_STRIPE = 2,
+	PAT_MARBLE = 3,
+	PAT_PPM = 4,
+};
+
+typedef struct s_ppm
+{
+	int				w;
+	int				h;
+	unsigned char	*rgb;
+}	t_ppm;
 
 typedef struct s_vector
 {
@@ -115,6 +133,9 @@ typedef struct s_object
 	float		mirror;
 	float		transp;
 	float		ior;
+	int			pattern;
+	float		bump;
+	t_ppm		*tex;
 	t_matrix	**gtfm;
 	int			(*hit)(t_ray *ray, struct s_info *info);
 }	t_object;
@@ -124,6 +145,7 @@ typedef struct s_light
 	t_vector	position;
 	t_vector	color;
 	float		intensity;
+	int			is_dir;
 }	t_light;
 
 typedef struct s_ambiant
@@ -262,6 +284,17 @@ int				close_hook(t_vars *vars);
 int				gpu_init(t_vars *vars);
 void			gpu_shutdown(t_vars *vars);
 int				gpu_raytrace(t_vars *vars);
+void			gpu_reset_camera(t_vars *vars);
+void			reset_accum(t_vars *vars);
+void			rebuild_camera(t_camera *cam);
+int				handle_keypress(int keycode, t_vars *vars);
+void			export_ppm(t_vars *vars, const char *path);
+void			object_uv(t_info *info, float *u, float *v);
+t_vector		sample_surface_color(t_info *info);
+void			apply_bump(t_info *info);
+t_ppm			*load_ppm(const char *path);
+void			free_ppm(t_ppm *ppm);
+t_vector		sample_ppm(t_ppm *ppm, float u, float v);
 t_matrix		*create_matrix(int rows, int cols);
 int				loop(t_vars *vars);
 int				test_intersection(t_ray *ray, t_object *objects, t_info *info);
@@ -340,6 +373,8 @@ int				test_cylinder(t_ray *ray, t_info *info);
 int				test_cone(t_ray *ray, t_info *info);
 int				test_triangle(t_ray *ray, t_info *info);
 int				test_half_sphere(t_ray *ray, t_info *info);
+int				test_disk(t_ray *ray, t_info *info);
+int				test_paraboloid(t_ray *ray, t_info *info);
 int				calculate_props(int min_index, t_vector *poi,
 					t_info *info, t_vector *vhat);
 int				cone_calculate_props(int min_index, t_vector *poi,

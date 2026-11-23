@@ -86,6 +86,7 @@ t_vector	trace_ray(t_vars *vars, t_ray *ray, int depth)
 
 	if (!test_intersection(ray, vars->objects, &info))
 		return (new_vec(0.0f, 0.0f, 0.0f));
+	apply_bump(&info);
 	local = compute_color(vars, &info, ray);
 	if (depth <= 0 || (info.e->mirror <= 0.0f && info.e->transp <= 0.0f))
 		return (local);

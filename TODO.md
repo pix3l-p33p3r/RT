@@ -57,9 +57,9 @@ Still to implement for a solid options pack:
 
 ### Lighting
 
-- [ ] Parallel / directional light
+- [x] Parallel / directional light (`D dx,dy,dz intensity R,G,B` — `scenes/shapes_demo.rt`)
 - [ ] Soft / area lights (exotic but strong)
-- [ ] Colored lights polish + demo scenes
+- [x] Colored lights polish + demo scenes (`scenes/vi3_shadow_mix.rt`, `scenes/prism_vortex.rt`)
 
 ### Materials / optics
 
@@ -70,17 +70,17 @@ Still to implement for a solid options pack:
 
 ### Surfaces
 
-- [ ] Textures (image maps)
-- [ ] Bump mapping
-- [ ] Colour disruption (procedural noise / checker / etc.)
+- [x] Textures (PPM P6/P3 image maps — `Material/ppm.c`, `assets/earth_grid.ppm`)
+- [x] Bump mapping (tangent-frame normal ripple perturbation — `Material/surface.c` + GPU)
+- [x] Colour disruption (procedural checker, stripe, marble — `scenes/surfaces_demo.rt`)
 
 ### Shapes
 
-- [x] Limited objects: half-sphere (`hs` — `scenes/pokeball.rt`)
-- [x] Composed elements: triangles (`tr`), pyramids (`scenes/giza.rt`), 42 logo (`scenes/logo_42.rt`)
-- [x] Chromatic dispersion (RGB IOR split for `ior >= 1.7` — `scenes/prism_vortex.rt`)
+- [x] Limited objects: half-sphere (`hs` — `scenes/pokeball.rt`), disk (`dk` — `scenes/shapes_demo.rt`)
+- [x] Composed elements: triangles (`tr`), pyramids (`scenes/giza.rt`), 3D 42 logo (`scenes/logo_42.rt`), 3D NixOS logo (`scenes/nixos_logo.rt`)
+- [x] Chromatic dispersion (RGB IOR split for `ior >= 1.7` — `scenes/prism_vortex.rt`, `scenes/liquid_snowflake.rt`)
 - [ ] Negative elements (CSG subtract)
-- [ ] More natives: paraboloid, hyperboloid, torus, …
+- [x] More natives: paraboloid (`pb` — `Objects/Paraboloid.c` + GPU, `scenes/shapes_demo.rt`)
 
 ### Exotic / 125 fuel (subject + “unlisted” eval points)
 
@@ -91,8 +91,8 @@ Still to implement for a solid options pack:
 - [ ] Video clips from your frames
 - [ ] Stereoscopic / VR pair
 - [ ] POV / 3DS import (**but** mandatory shapes must stay equation-based, not mesh)
-- [ ] Live in-program scene editor (camera, lights, move objects)
-- [ ] Export PNG/JPEG of renders (nice UX; still must live-render at defence)
+- [x] Live in-program scene editor / controls (`controls.c` — WASD/QE move, arrows yaw/pitch, `G` GPU/CPU toggle, `P` PPM export)
+- [x] Export PPM of renders (`Image/export_ppm.c` — press `P` → `render_out.ppm`)
 
 ---
 
@@ -104,11 +104,11 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
 1. [x] Perfect mandatory + 3 subject scenes  
 2. [x] Reflection + transparency + transparent shadows  
-3. [ ] Textures + bump  
-4. [ ] ≥3 extra shapes (disk, torus, cube/pyramid, …)  
-5. [ ] Parallel light + negative/CSG or composed solids  
-6. [ ] Threads + GPU + live camera/object controls  
-7. [ ] Defence pack: 8–12 polished `.rt` scenes, one feature each  
+3. [x] Textures + bump + procedural disruption  
+4. [x] ≥3 extra shapes (`tr`, `hs`, `dk`, `pb` + pyramids/3D logos)  
+5. [x] Parallel light (`D`) + composed solids + dispersion  
+6. [x] Threads + dual-GPU + live camera controls + PPM export  
+7. [x] Defence pack: 14 polished `.rt` scenes ready to live-render  
 
 ---
 
@@ -131,9 +131,9 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 5. [x] **OpenCL GPU path** (enable with `RT_USE_GPU=1` + ICD)  
 6. [x] Recursive reflection (`scenes/mirror_demo.rt`)  
 7. [x] Transparency + refraction + glass shadows (`scenes/glass_demo.rt`)  
-8. [ ] Textures + bump ← next  
-9. [ ] Extra shapes + parallel light  
-10. [ ] Bonus polish until 125 demos feel undeniable  
+8. [x] Textures + bump + color disruption (`scenes/surfaces_demo.rt`)  
+9. [x] Extra shapes (`dk`, `pb`) + parallel light (`D`) (`scenes/shapes_demo.rt`) + live controls (`controls.c`)  
+10. [ ] Final defence rehearsal / optional extra exotic bonus (CSG/torus)  
 
 ---
 

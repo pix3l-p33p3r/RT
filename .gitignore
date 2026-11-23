@@ -7,6 +7,9 @@ miniRTbonus
 tests/test_cone_quad
 tests/test_reflect
 tests/test_refract
+tests/test_surface
+tests/test_shapes2
+render_out.ppm
 
 # editor / OS
 .DS_Store

@@ -41,9 +41,10 @@ Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, 
 - [x] Ambient light
 - [x] External scene files
 - [x] Recursive mirror reflection (`scenes/mirror_demo.rt`, optional trailing `mirror` `[0..1]`)
-- [x] Transparency, Snell refraction, dispersion & tinted glass shadows (`scenes/glass_demo.rt`, `scenes/prism_vortex.rt`)
-- [x] Triangles (`tr`) & half-spheres (`hs`) — `scenes/pokeball.rt`, `scenes/giza.rt`, `scenes/logo_42.rt`, `scenes/multi_spots_grid.rt`
-- [ ] Textures, bump, parallel light, live controls
+- [x] Transparency, Snell refraction, dispersion & tinted glass shadows (`scenes/glass_demo.rt`, `scenes/prism_vortex.rt`, `scenes/liquid_snowflake.rt`)
+- [x] Extra shapes & parallel light: `tr`, `hs`, `dk`, `pb`, `D` (`scenes/pokeball.rt`, `scenes/giza.rt`, `scenes/logo_42.rt`, `scenes/nixos_logo.rt`, `scenes/shapes_demo.rt`)
+- [x] Surfaces: checker/stripe/marble disruption, bump mapping, PPM image textures (`scenes/surfaces_demo.rt`)
+- [x] Live controls: `WASD`/`QE` move · arrows look · `G` toggle GPU/CPU · `P` export `render_out.ppm` · `ESC` clean exit (0 leaks)
 
 ## Branches
 

@@ -6,7 +6,7 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/08 04:36:04 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/23 00:28:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 01:58:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,13 +26,6 @@ int	loop(t_vars *vars)
 	raytrace(vars);
 	render(vars);
 	return (0);
-}
-
-int	key_hook(int keycode, t_vars *vars)
-{
-	if (keycode == 65307)
-		close_hook(vars);
-	return (keycode);
 }
 
 int	expose_hook(t_vars *vars)
@@ -79,7 +72,7 @@ int	main(int ac, char **av)
 		fflush(stdout);
 	}
 	mlx_loop_hook(vars.mlx, loop, &vars);
-	mlx_hook(vars.win, 2, 1L << 0, key_hook, &vars);
+	mlx_hook(vars.win, 2, 1L << 0, handle_keypress, &vars);
 	mlx_hook(vars.win, 12, 1L << 15, expose_hook, &vars);
 	mlx_hook(vars.win, 17, 1L << 0, close_hook, &vars);
 	mlx_loop(vars.mlx);

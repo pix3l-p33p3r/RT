@@ -1,0 +1,21 @@
+# Shapes 2 showcase: parallel sun light (D), limited disk (dk), paraboloid (pb)
+# Engine coordinates: +X right, +Y forward, -Z up
+# D direction points toward the distant sun (unit light direction)
+A 0.18 235,242,255
+C 0,-13.5,-3.6 0,0,-1.0 46
+D 0.45,-0.55,-0.70 0.95 255,245,220
+L -6.5,-5.5,-5.5 0.35 190,220,255
+
+# Slate reflective floor plane at z=0
+pl 0,0,0 0,0,-1 75,82,95 0.18
+
+# Native quadric paraboloid (glossy gold dish/bowl opening upward toward camera)
+pb 0,-0.4,-0.2 0,0.22,0.97 3.2 1.7 235,175,65 0.45
+
+# Floating mirror disk (tilted halo reflecting the scene below)
+dk 0,2.8,-2.9 0,-0.95,0.30 3.0 220,232,248 0.85
+
+# Classic primitives framing the showcase
+sp -3.2,-1.2,-1.0 2.0 215,55,60 0.25
+cy 3.3,0.6,-1.3 0,0,1 1.3 1.3 55,135,230 0.30
+cn -3.2,1.6,-1.2 0,0,1 1.6 1.2 50,195,130 0.20

@@ -12,7 +12,7 @@
 
 #include "cl_internal.h"
 
-static void	pack_cam(t_gpu_cam *c, t_camera *cam)
+void	cl_pack_cam(t_gpu_cam *c, t_camera *cam)
 {
 	c->origin[0] = cam->origin.x;
 	c->origin[1] = cam->origin.y;
@@ -46,6 +46,8 @@ static void	pack_obj(t_gpu_obj *o, t_object *e)
 	o->mirror = e->mirror;
 	o->transp = e->transp;
 	o->ior = e->ior;
+	o->pattern = e->pattern;
+	o->bump = e->bump;
 	if (o->ior < 1.0f)
 		o->ior = 1.0f;
 	if (e->type == SPHERE)
@@ -68,15 +70,12 @@ static void	pack_scene(t_gpu *g, t_vars *vars, t_gpu_scene *sc)
 	i = -1;
 	while (++i < g->nlight)
 	{
-		sc->lights[i].pos[0] = vars->lights[i].position.x;
-		sc->lights[i].pos[1] = vars->lights[i].position.y;
-		sc->lights[i].pos[2] = vars->lights[i].position.z;
-		sc->lights[i].color[0] = vars->lights[i].color.x;
-		sc->lights[i].color[1] = vars->lights[i].color.y;
-		sc->lights[i].color[2] = vars->lights[i].color.z;
+		ft_memcpy(sc->lights[i].pos, &vars->lights[i].position, 12);
+		ft_memcpy(sc->lights[i].color, &vars->lights[i].color, 12);
 		sc->lights[i].intensity = vars->lights[i].intensity;
+		sc->lights[i].is_dir = vars->lights[i].is_dir;
 	}
-	pack_cam(&sc->cam, &vars->camera);
+	cl_pack_cam(&sc->cam, &vars->camera);
 }
 
 static int	upload_to_dev(t_gpu *g, t_gpu_dev *d, t_gpu_scene *sc)

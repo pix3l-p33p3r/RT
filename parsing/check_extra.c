@@ -12,6 +12,21 @@
 
 #include "miniRT.h"
 
+int	check_extra_shapes(t_vars *var, char *line, int i)
+{
+	if (ft_strlen(line) <= 2)
+		return (0);
+	if (ft_strncmp(line, "tr ", 3) == 0)
+		return (check_triangle(var, line, i), 1);
+	if (ft_strncmp(line, "hs ", 3) == 0)
+		return (check_half_sphere(var, line, i), 1);
+	if (ft_strncmp(line, "dk ", 3) == 0)
+		return (check_disk(var, line, i), 1);
+	if (ft_strncmp(line, "pb ", 3) == 0)
+		return (check_paraboloid(var, line, i), 1);
+	return (0);
+}
+
 void	check_triangle(t_vars *var, char *line, int i)
 {
 	t_object	obj;

@@ -22,6 +22,8 @@ void	check_all_scenes(t_vars *var, char *line, int i)
 		check_camera(var, line, i);
 	else if (line[i] == 'L')
 		check_light(var, line, i);
+	else if (line[i] == 'D')
+		check_dir_light(var, line, i);
 	else if (ft_strlen(line) > 2 && ft_strncmp(line, "sp ", 3) == 0)
 		check_sphere(var, line, i);
 	else if (ft_strlen(line) > 2 && ft_strncmp(line, "pl ", 3) == 0)
@@ -30,10 +32,8 @@ void	check_all_scenes(t_vars *var, char *line, int i)
 		check_cylinder(var, line, i);
 	else if (ft_strlen(line) > 2 && ft_strncmp(line, "cn ", 3) == 0)
 		check_cone(var, line, i);
-	else if (ft_strlen(line) > 2 && ft_strncmp(line, "tr ", 3) == 0)
-		check_triangle(var, line, i);
-	else if (ft_strlen(line) > 2 && ft_strncmp(line, "hs ", 3) == 0)
-		check_half_sphere(var, line, i);
+	else if (check_extra_shapes(var, line, i))
+		return ;
 	else
 	{
 		printf("Error : unexpected behavior\n");
@@ -103,6 +103,7 @@ void	check_light(t_vars *var, char *line, int i)
 	t_light	*tmp;
 
 	i++;
+	light.is_dir = 0;
 	light.position = parse_vector(line, &i);
 	light.intensity = parse_number(line, &i);
 	light.color = parse_vector(line, &i);

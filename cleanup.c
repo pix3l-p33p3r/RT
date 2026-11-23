@@ -27,6 +27,7 @@ static void	free_objects(t_vars *vars)
 			delete_matrix(vars->objects[i].gtfm[1]);
 			free(vars->objects[i].gtfm);
 		}
+		free_ppm(vars->objects[i].tex);
 		i++;
 	}
 	free(vars->objects);

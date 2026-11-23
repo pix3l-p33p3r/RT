@@ -1,0 +1,23 @@
+# Procedural surface patterns, bump mapping & PPM texture showcase
+# Engine coords: +X right, +Y forward, -Z UP
+# Trailing fields: mirror transp ior [pattern [bump [ppm_path]]]
+A 0.2 255,255,255
+C 0,-12.5,-3.2 0,0,-0.8 46
+L 5.0,-6.5,-8.5 0.95 255,250,240
+L -6.0,-5.0,-6.0 0.65 205,225,255
+
+# Checkered glossy floor (pattern=1, bump=0.0) + dark studio backdrop
+pl 0,0,0 0,0,-1 220,225,235 0.25 0.0 1.0 1 0.0
+pl 0,7.5,0 0,-1,0 45,55,80 0.05 0.0 1.0 0 0.0
+
+# Marble-disrupted sphere (left, pattern=3, bump=0.0)
+sp -3.5,0.6,-1.1 2.2 185,225,215 0.12 0.0 1.0 3 0.0
+
+# Stripe + bump cylinder (mid-left back, pattern=2, bump=0.18)
+cy -1.5,2.4,-1.55 0,0,-1 1.5 1.55 70,145,235 0.12 0.0 1.0 2 0.18
+
+# PPM-textured globe sphere (front center, pattern=4, bump=0.05)
+sp 0.85,-0.6,-1.2 2.4 255,255,255 0.08 0.0 1.0 4 0.05 assets/earth_grid.ppm
+
+# Wavy bump-mapped sphere (right, pattern=0, bump=0.25)
+sp 3.5,0.6,-1.1 2.2 235,145,55 0.15 0.0 1.0 0 0.25

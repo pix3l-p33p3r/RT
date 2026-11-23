@@ -22,7 +22,10 @@ static void	add_light_spec(t_norm6 *norm, t_info *info,
 	atten = shadow_atten(l, vars->objects, info);
 	if (atten.x <= 0.0f && atten.y <= 0.0f && atten.z <= 0.0f)
 		return ;
-	norm->lighdir = normalized(sub_vec(l->position, info->hitpoint));
+	if (l->is_dir)
+		norm->lighdir = l->position;
+	else
+		norm->lighdir = normalized(sub_vec(l->position, info->hitpoint));
 	norm->r = reflect(norm->lighdir, info->normal);
 	norm->v = normalized(camera_ray->direction);
 	norm->prod = dot_product(norm->r, norm->v);

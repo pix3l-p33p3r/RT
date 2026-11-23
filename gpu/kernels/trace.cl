@@ -15,12 +15,15 @@ typedef struct {
 	float	mirror;
 	float	transp;
 	float	ior;
+	int		pattern;
+	float	bump;
 } GpuObj;
 
 typedef struct {
 	float	pos[3];
 	float	color[3];
 	float	intensity;
+	int		is_dir;
 } GpuLight;
 
 typedef struct {
@@ -332,6 +335,138 @@ static int	hit_half_sphere(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 	return (0);
 }
 
+static int	hit_disk(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+{
+	float3	pos = V3(o.pos);
+	float3	axis = norm3(V3(o.axis));
+	float	denom = dot3(axis, rd);
+	if (fabs(denom) < 1e-6f)
+		return (0);
+	float	tt = dot3(pos - ro, axis) / denom;
+	if (tt < 1e-3f)
+		return (0);
+	float3	p = ro + rd * tt;
+	float3	d = p - pos;
+	if (dot3(d, d) > o.radius * o.radius)
+		return (0);
+	*t = tt;
+	*n = (denom > 0.0f) ? -axis : axis;
+	return (1);
+}
+
+static int	hit_paraboloid(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+{
+	float3	pos = V3(o.pos);
+	float3	ax = norm3(V3(o.axis));
+	float3	ref = (fabs(ax.z) < 0.9f) ? (float3)(0, 0, 1) : (float3)(1, 0, 0);
+	float3	u = norm3(cross(ref, ax));
+	float3	v = cross(ax, u);
+	float	inv_r = 1.0f / fmax(o.radius, 1e-4f);
+	float	inv_h = 1.0f / fmax(o.height, 1e-4f);
+	float3	oc = ro - pos;
+	float3	lo = (float3)(dot3(oc, u) * inv_r, dot3(oc, v) * inv_r,
+			dot3(oc, ax) * inv_h);
+	float3	ld = (float3)(dot3(rd, u) * inv_r, dot3(rd, v) * inv_r,
+			dot3(rd, ax) * inv_h);
+	float	a = ld.x * ld.x + ld.y * ld.y;
+	float	b = 2.0f * (lo.x * ld.x + lo.y * ld.y) - ld.z;
+	float	c = lo.x * lo.x + lo.y * lo.y - lo.z;
+	float	best = 1e30f;
+	float3	bp = (float3)(0, 0, 0);
+	int		found = 0;
+	if (fabs(a) < 1e-6f)
+	{
+		if (fabs(b) > 1e-6f)
+		{
+			float r0 = -c / b;
+			float3 lp = lo + ld * r0;
+			if (r0 > 1e-3f && lp.z >= 0.0f && lp.z <= 1.0f)
+			{
+				best = r0;
+				bp = lp;
+				found = 1;
+			}
+		}
+	}
+	else
+	{
+		float disc = b * b - 4.0f * a * c;
+		if (disc >= 0.0f)
+		{
+			float sd = sqrt(disc);
+			float rts[2] = { (-b - sd) / (2.0f * a), (-b + sd) / (2.0f * a) };
+			for (int k = 0; k < 2; k++)
+			{
+				if (rts[k] > 1e-3f && rts[k] < best)
+				{
+					float3 lp = lo + ld * rts[k];
+					if (lp.z >= 0.0f && lp.z <= 1.0f)
+					{
+						best = rts[k];
+						bp = lp;
+						found = 1;
+					}
+				}
+			}
+		}
+	}
+	if (!found)
+		return (0);
+	*t = best;
+	float3 wn = u * (2.0f * bp.x * inv_r) + v * (2.0f * bp.y * inv_r)
+		- ax * inv_h;
+	*n = norm3(wn);
+	if (dot3(*n, rd) > 0.0f)
+		*n = -*n;
+	return (1);
+}
+
+static float3	gpu_surface_color(float3 p, GpuObj o)
+{
+	float3	base_c = V3(o.color);
+	float	u;
+	float	v;
+
+	if (o.pattern == 0 || o.pattern == 4)
+		return (base_c);
+	if (o.type == 1 || o.type == 6)
+	{
+		float3 d = norm3(p - V3(o.pos));
+		u = 0.5f + atan2(d.y, d.x) / (2.0f * 3.14159265f);
+		v = 0.5f - asin(clamp(d.z, -1.0f, 1.0f)) / 3.14159265f;
+	}
+	else
+	{
+		u = p.x * 0.4f;
+		v = p.y * 0.4f;
+	}
+	if (o.pattern == 1)
+	{
+		int iu = (int)floor(u * 4.0f);
+		int iv = (int)floor(v * 4.0f);
+		return (((iu + iv) & 1) ? base_c : base_c * 0.18f);
+	}
+	if (o.pattern == 2)
+	{
+		float s = 0.5f + 0.5f * sin((u * 12.0f + sin(v * 6.0f)) * 3.14159f);
+		return (base_c * (0.35f + 0.65f * s));
+	}
+	float m = 0.5f + 0.5f * sin((p.x * 2.5f + sin(p.y * 3.0f + p.z * 2.0f) * 2.2f));
+	return (base_c * (0.3f + 0.7f * m));
+}
+
+static float3	gpu_apply_bump(float3 p, float3 n, float bump)
+{
+	if (bump <= 0.0f)
+		return (n);
+	float3	ref = (fabs(n.z) < 0.9f) ? (float3)(0, 0, 1) : (float3)(1, 0, 0);
+	float3	t1 = norm3(cross(ref, n));
+	float3	t2 = cross(n, t1);
+	float	du = sin(p.x * 14.0f + p.z * 7.0f) * bump;
+	float	dv = cos(p.y * 14.0f + p.x * 7.0f) * bump;
+	return (norm3(n + t1 * du + t2 * dv));
+}
+
 static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 		int nobj, float *tmin, float3 *n, float3 *col,
 		float *shininess, float *reflectivity, float *mirror,
@@ -364,13 +499,18 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 			;
 		else if (o.type == 6 && hit_half_sphere(ro, rd, o, &t, &nn))
 			;
+		else if (o.type == 7 && hit_disk(ro, rd, o, &t, &nn))
+			;
+		else if (o.type == 8 && hit_paraboloid(ro, rd, o, &t, &nn))
+			;
 		else
 			continue ;
 		if (t < *tmin)
 		{
+			float3 hp = ro + rd * t;
 			*tmin = t;
-			*n = nn;
-			*col = V3(o.color);
+			*n = gpu_apply_bump(hp, nn, o.bump);
+			*col = gpu_surface_color(hp, o);
 			*shininess = o.shininess;
 			*reflectivity = o.reflectivity;
 			*mirror = o.mirror;
@@ -409,6 +549,10 @@ static float3	gpu_shadow_atten(float3 p, float3 ldir, float ldist,
 			h = hit_triangle(ro, ldir, o, &t, &nn);
 		else if (o.type == 6)
 			h = hit_half_sphere(ro, ldir, o, &t, &nn);
+		else if (o.type == 7)
+			h = hit_disk(ro, ldir, o, &t, &nn);
+		else if (o.type == 8)
+			h = hit_paraboloid(ro, ldir, o, &t, &nn);
 		if (!h || t >= ldist)
 			continue ;
 		if (o.transp <= 0.0f)
@@ -427,11 +571,20 @@ static float3	shade_direct(float3 p, float3 n, float3 rd, float3 col,
 
 	for (int li = 0; li < nlight; li++)
 	{
-		float3 lpos = V3(lights[li].pos);
 		float3 lcol = V3(lights[li].color);
-		float3 ldir = lpos - p;
-		float ldist = sqrt(dot3(ldir, ldir));
-		ldir = ldir / fmax(ldist, 1e-6f);
+		float3 ldir;
+		float ldist;
+		if (lights[li].is_dir)
+		{
+			ldir = norm3(V3(lights[li].pos));
+			ldist = 1e30f;
+		}
+		else
+		{
+			ldir = V3(lights[li].pos) - p;
+			ldist = sqrt(dot3(ldir, ldir));
+			ldir = ldir / fmax(ldist, 1e-6f);
+		}
 		float3 atten = gpu_shadow_atten(p, ldir, ldist, objs, nobj, oid);
 		if (atten.x <= 0.0f && atten.y <= 0.0f && atten.z <= 0.0f)
 			continue ;
