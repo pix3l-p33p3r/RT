@@ -18,9 +18,9 @@ Needs miniLibX (`-lmlx -lXext -lX11`), `-lm`, `-pthread`, and `-lOpenCL`.
 - **CPU threads (default):** row-parallel pthread raytrace  
 - **Dual-GPU OpenCL (AMD RX 6500 + Intel UHD 770):**
   ```bash
-  nix-enter nix develop --command bash -c "make re && RT_USE_GPU=1 ./rt scenes/cone_demo.rt"
+  ./rt-gpu scenes/giza.rt
   ```
-  Splits scanlines across all detected GPUs weighted by compute units (2 CU Intel + 16 CU RX 6500). Falls back to pthreads if no GPU ICD is present.
+  (Auto-enters Nix OpenCL env, builds with Nix `ocl-icd`, and splits scanlines across both GPUs weighted by compute units. Press `G` inside to toggle GPU/CPU live.)
 
 ## Status
 

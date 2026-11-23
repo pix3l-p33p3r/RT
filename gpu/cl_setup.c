@@ -63,7 +63,8 @@ int	gpu_init(t_vars *vars)
 	cl_collect_devices(g);
 	src = cl_load_file("gpu/kernels/trace.cl", &slen);
 	if (g->ndevs == 0 || !src)
-		return (free(src), free(g), printf("[rt] OpenCL: unavailable\n"), 0);
+		return (free(src), free(g),
+			printf("[rt] OpenCL: no ICD (use ./rt-gpu <scene.rt>)\n"), 0);
 	build_all_devices(g, src, slen);
 	free(src);
 	g->fb = calloc(WIDTH * HEIGHT * 3, sizeof(float));

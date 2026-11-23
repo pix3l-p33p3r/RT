@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$HOME/.local/bin/nix-enter" bash -lc "
+  cd $(printf '%q' "$DIR")
+  exec nix develop --command bash -lc '
+    if [ ! -x ./rt ] || ! ldd ./rt 2>/dev/null | grep -q /nix/store/.*ocl-icd; then
+      make re >/dev/null
+    fi
+    exec env RT_USE_GPU=1 ./rt \"\$@\"
+  ' -- $(printf '%q ' "$@")
+"
