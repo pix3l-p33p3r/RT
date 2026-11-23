@@ -1,4 +1,6 @@
-/* OpenCL 1.2 primary-ray tracer (sp/pl/cy/cn + ambient/diffuse/shadows). */
+/* OpenCL 1.2 multi-GPU ray tracer (sp/pl/cy/cn + shadows + Phong + jitter). */
+
+#define V3(a) ((float3)((a)[0], (a)[1], (a)[2]))
 
 typedef struct {
 	int		type;
@@ -7,6 +9,8 @@ typedef struct {
 	float	color[3];
 	float	radius;
 	float	height;
+	float	shininess;
+	float	reflectivity;
 } GpuObj;
 
 typedef struct {
@@ -24,17 +28,28 @@ typedef struct {
 	float	aspect;
 } GpuCam;
 
-float3	vload3f(const float *a)
+static uint	pcg_hash(uint v)
 {
-	return ((float3)(a[0], a[1], a[2]));
+	uint	state;
+	uint	word;
+
+	state = v * 747796405u + 2891336453u;
+	word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+	return ((word >> 22u) ^ word);
 }
 
-float	dot3(float3 a, float3 b)
+static float	rand_u(uint *seed)
+{
+	*seed = pcg_hash(*seed);
+	return ((float)(*seed) * (1.0f / 4294967295.0f));
+}
+
+static float	dot3(float3 a, float3 b)
 {
 	return (a.x * b.x + a.y * b.y + a.z * b.z);
 }
 
-float3	norm3(float3 a)
+static float3	norm3(float3 a)
 {
 	float	l;
 
@@ -44,15 +59,17 @@ float3	norm3(float3 a)
 	return (a / l);
 }
 
-int	hit_sphere(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+static int	hit_sphere(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 {
+	float3	pos;
 	float3	oc;
 	float	b;
 	float	c;
 	float	disc;
 	float	t0;
 
-	oc = ro - vload3f(o.pos);
+	pos = V3(o.pos);
+	oc = ro - pos;
 	b = 2.0f * dot3(oc, rd);
 	c = dot3(oc, oc) - o.radius * o.radius;
 	disc = b * b - 4.0f * c;
@@ -64,22 +81,22 @@ int	hit_sphere(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 	if (t0 < 1e-3f)
 		return (0);
 	*t = t0;
-	*n = norm3((ro + rd * t0) - vload3f(o.pos));
+	*n = norm3((ro + rd * t0) - pos);
 	return (1);
 }
 
-int	hit_plane(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+static int	hit_plane(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 {
 	float3	axis;
 	float	denom;
 	float	d;
 	float	tt;
 
-	axis = norm3(vload3f(o.axis));
+	axis = norm3(V3(o.axis));
 	denom = dot3(axis, rd);
 	if (fabs(denom) < 1e-6f)
 		return (0);
-	d = -dot3(axis, vload3f(o.pos));
+	d = -dot3(axis, V3(o.pos));
 	tt = (-d - dot3(ro, axis)) / denom;
 	if (tt < 1e-3f)
 		return (0);
@@ -90,8 +107,9 @@ int	hit_plane(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 	return (1);
 }
 
-int	hit_cylinder(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+static int	hit_cylinder(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 {
+	float3	pos;
 	float3	ca;
 	float3	oc;
 	float	card;
@@ -100,81 +118,154 @@ int	hit_cylinder(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 	float	b;
 	float	c;
 	float	disc;
-	float	t0;
-	float3	p;
-	float	h;
-	float	halfh;
+	float	s;
+	float	roots[2];
+	float	best;
+	float3	best_n;
+	int		found;
+	int		k;
 
-	ca = norm3(vload3f(o.axis));
-	oc = ro - vload3f(o.pos);
+	pos = V3(o.pos);
+	ca = norm3(V3(o.axis));
+	oc = ro - pos;
 	card = dot3(ca, rd);
 	caoc = dot3(ca, oc);
+	best = 1e30f;
+	found = 0;
 	a = dot3(rd, rd) - card * card;
 	b = 2.0f * (dot3(rd, oc) - card * caoc);
 	c = dot3(oc, oc) - caoc * caoc - o.radius * o.radius;
 	disc = b * b - 4.0f * a * c;
-	if (disc < 0.0f || fabs(a) < 1e-8f)
+	if (disc >= 0.0f && fabs(a) > 1e-8f)
+	{
+		s = sqrt(disc);
+		roots[0] = (-b - s) / (2.0f * a);
+		roots[1] = (-b + s) / (2.0f * a);
+		for (k = 0; k < 2; k++)
+		{
+			if (roots[k] > 1e-3f && roots[k] < best)
+			{
+				float3 p = ro + rd * roots[k];
+				float h = dot3(p - pos, ca);
+				if (fabs(h) <= o.height)
+				{
+					best = roots[k];
+					best_n = norm3(p - pos - ca * h);
+					found = 1;
+				}
+			}
+		}
+	}
+	if (fabs(card) > 1e-6f)
+	{
+		float cap_h[2] = { o.height, -o.height };
+		for (k = 0; k < 2; k++)
+		{
+			float3 cc = pos + ca * cap_h[k];
+			float tc = dot3(cc - ro, ca) / card;
+			if (tc > 1e-3f && tc < best)
+			{
+				float3 p = ro + rd * tc;
+				float3 d = p - cc;
+				if (dot3(d, d) <= o.radius * o.radius)
+				{
+					best = tc;
+					best_n = (cap_h[k] > 0.0f) ? ca : -ca;
+					found = 1;
+				}
+			}
+		}
+	}
+	if (!found)
 		return (0);
-	t0 = (-b - sqrt(disc)) / (2.0f * a);
-	if (t0 < 1e-3f)
-		t0 = (-b + sqrt(disc)) / (2.0f * a);
-	if (t0 < 1e-3f)
-		return (0);
-	p = ro + rd * t0;
-	h = dot3(p - vload3f(o.pos), ca);
-	halfh = o.height * 0.5f;
-	if (h < -halfh || h > halfh)
-		return (0);
-	*t = t0;
-	*n = norm3(p - vload3f(o.pos) - ca * h);
+	*t = best;
+	*n = best_n;
 	return (1);
 }
 
-int	hit_cone(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+static int	hit_cone(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 {
+	float3	pos;
 	float3	ca;
 	float3	oc;
-	float	k;
+	float	ratio;
+	float	k2;
 	float	card;
 	float	caoc;
 	float	a;
 	float	b;
 	float	c;
 	float	disc;
-	float	t0;
-	float3	p;
-	float	h;
-	float	halfh;
+	float	s;
+	float	roots[2];
+	float	best;
+	float3	best_n;
+	int		found;
+	int		k;
 
-	ca = norm3(vload3f(o.axis));
-	oc = ro - vload3f(o.pos);
-	k = (o.radius / fmax(o.height, 1e-4f));
-	k = k * k;
+	pos = V3(o.pos);
+	ca = norm3(V3(o.axis));
+	oc = ro - pos;
+	ratio = o.radius / fmax(o.height, 1e-4f);
+	k2 = ratio * ratio;
 	card = dot3(ca, rd);
 	caoc = dot3(ca, oc);
-	a = dot3(rd, rd) - (1.0f + k) * card * card;
-	b = 2.0f * (dot3(rd, oc) - (1.0f + k) * card * caoc);
-	c = dot3(oc, oc) - (1.0f + k) * caoc * caoc;
+	best = 1e30f;
+	found = 0;
+	a = dot3(rd, rd) - (1.0f + k2) * card * card;
+	b = 2.0f * (dot3(rd, oc) - (1.0f + k2) * card * caoc);
+	c = dot3(oc, oc) - (1.0f + k2) * caoc * caoc;
 	disc = b * b - 4.0f * a * c;
-	if (disc < 0.0f || fabs(a) < 1e-8f)
+	if (disc >= 0.0f && fabs(a) > 1e-8f)
+	{
+		s = sqrt(disc);
+		roots[0] = (-b - s) / (2.0f * a);
+		roots[1] = (-b + s) / (2.0f * a);
+		for (k = 0; k < 2; k++)
+		{
+			if (roots[k] > 1e-3f && roots[k] < best)
+			{
+				float3 p = ro + rd * roots[k];
+				float h = dot3(p - pos, ca);
+				if (fabs(h) <= o.height)
+				{
+					best = roots[k];
+					best_n = norm3(p - pos - ca * h * (1.0f + k2));
+					found = 1;
+				}
+			}
+		}
+	}
+	if (fabs(card) > 1e-6f)
+	{
+		float cap_h[2] = { o.height, -o.height };
+		for (k = 0; k < 2; k++)
+		{
+			float3 cc = pos + ca * cap_h[k];
+			float tc = dot3(cc - ro, ca) / card;
+			if (tc > 1e-3f && tc < best)
+			{
+				float3 p = ro + rd * tc;
+				float3 d = p - cc;
+				if (dot3(d, d) <= o.radius * o.radius)
+				{
+					best = tc;
+					best_n = (cap_h[k] > 0.0f) ? ca : -ca;
+					found = 1;
+				}
+			}
+		}
+	}
+	if (!found)
 		return (0);
-	t0 = (-b - sqrt(disc)) / (2.0f * a);
-	if (t0 < 1e-3f)
-		t0 = (-b + sqrt(disc)) / (2.0f * a);
-	if (t0 < 1e-3f)
-		return (0);
-	p = ro + rd * t0;
-	h = dot3(p - vload3f(o.pos), ca);
-	halfh = o.height * 0.5f;
-	if (h < -halfh || h > halfh)
-		return (0);
-	*t = t0;
-	*n = norm3(p - vload3f(o.pos) - ca * h * (1.0f + k));
+	*t = best;
+	*n = best_n;
 	return (1);
 }
 
-int	intersect(float3 ro, float3 rd, __global const GpuObj *objs, int nobj,
-		float *tmin, float3 *n, float3 *col, int *oid)
+static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
+		int nobj, float *tmin, float3 *n, float3 *col,
+		float *shininess, float *reflectivity, int *oid)
 {
 	int		i;
 	float	t;
@@ -184,32 +275,30 @@ int	intersect(float3 ro, float3 rd, __global const GpuObj *objs, int nobj,
 	*tmin = 1e30f;
 	*oid = -1;
 	hit = 0;
-	i = 0;
-	while (i < nobj)
+	for (i = 0; i < nobj; i++)
 	{
+		GpuObj o = objs[i];
 		t = 1e30f;
-		if (objs[i].type == 1 && hit_sphere(ro, rd, objs[i], &t, &nn))
+		if (o.type == 1 && hit_sphere(ro, rd, o, &t, &nn))
 			;
-		else if (objs[i].type == 2 && hit_plane(ro, rd, objs[i], &t, &nn))
+		else if (o.type == 2 && hit_plane(ro, rd, o, &t, &nn))
 			;
-		else if (objs[i].type == 3 && hit_cylinder(ro, rd, objs[i], &t, &nn))
+		else if (o.type == 3 && hit_cylinder(ro, rd, o, &t, &nn))
 			;
-		else if (objs[i].type == 4 && hit_cone(ro, rd, objs[i], &t, &nn))
+		else if (o.type == 4 && hit_cone(ro, rd, o, &t, &nn))
 			;
 		else
-		{
-			i++;
 			continue ;
-		}
 		if (t < *tmin)
 		{
 			*tmin = t;
 			*n = nn;
-			*col = vload3f(objs[i].color);
+			*col = V3(o.color);
+			*shininess = o.shininess;
+			*reflectivity = o.reflectivity;
 			*oid = i;
 			hit = 1;
 		}
-		i++;
 	}
 	return (hit);
 }
@@ -223,11 +312,17 @@ __kernel void	trace_frame(__global float *out,
 		float3 ambient,
 		int width,
 		int height,
+		int y_start,
+		int y_count,
 		int frame)
 {
 	int		id;
 	int		x;
+	int		ly;
 	int		y;
+	uint	seed;
+	float	xoff;
+	float	yoff;
 	float	nx;
 	float	ny;
 	float3	ro;
@@ -235,50 +330,65 @@ __kernel void	trace_frame(__global float *out,
 	float	tmin;
 	float3	n;
 	float3	col;
-	float3	p;
-	float3	rgb;
+	float	shininess;
+	float	reflectivity;
 	int		oid;
-	int		li;
-	float3	ldir;
-	float	ldist;
-	float	t2;
-	float3	n2;
-	float3	c2;
-	int		oid2;
-	float	diff;
+	float3	rgb;
 
-	id = get_global_id(0);
-	if (id >= width * height)
+	id = (int)get_global_id(0);
+	if (id >= width * y_count)
 		return ;
 	x = id % width;
-	y = id / width;
-	nx = ((float)x / (float)(width / 2)) - 1.0f;
-	ny = ((float)y / (float)(height / 2)) - 1.0f;
-	ro = vload3f(cam->origin);
-	rd = norm3(vload3f(cam->center) + vload3f(cam->u) * nx
-			+ vload3f(cam->v) * ny - ro);
-	rgb = ambient;
-	if (intersect(ro, rd, objs, nobj, &tmin, &n, &col, &oid))
+	ly = id / width;
+	y = y_start + ly;
+	seed = (uint)(y * width + x) ^ ((uint)frame * 2654435761u);
+	xoff = rand_u(&seed) - 0.5f;
+	yoff = rand_u(&seed) - 0.5f;
+	nx = (((float)x + xoff) * (2.0f / (float)width)) - 1.0f;
+	ny = (((float)y + yoff) * (2.0f / (float)height)) - 1.0f;
+	ro = V3(cam->origin);
+	rd = norm3(V3(cam->center) + V3(cam->u) * nx + V3(cam->v) * ny - ro);
+	rgb = (float3)(0.0f, 0.0f, 0.0f);
+	if (intersect(ro, rd, objs, nobj, &tmin, &n, &col,
+			&shininess, &reflectivity, &oid))
 	{
-		p = ro + rd * tmin;
-		li = 0;
-		while (li < nlight)
+		float3 p = ro + rd * tmin;
+		rgb = ambient;
+		for (int li = 0; li < nlight; li++)
 		{
-			ldir = vload3f(lights[li].pos) - p;
-			ldist = sqrt(dot3(ldir, ldir));
-			ldir = ldir / ldist;
-			if (!intersect(p + ldir * 1e-3f, ldir, objs, nobj, &t2, &n2, &c2,
-					&oid2) || t2 > ldist)
+			float3 lpos = V3(lights[li].pos);
+			float3 lcol = V3(lights[li].color);
+			float3 ldir = lpos - p;
+			float ldist = sqrt(dot3(ldir, ldir));
+			ldir = ldir / fmax(ldist, 1e-6f);
+			float t2;
+			float3 n2, c2;
+			float sh2, rf2;
+			int oid2;
+			int blocked = intersect(p + ldir * 1e-3f, ldir, objs, nobj,
+					&t2, &n2, &c2, &sh2, &rf2, &oid2) && (t2 < ldist);
+			if (!blocked)
 			{
-				diff = fmax(dot3(n, ldir), 0.0f);
-				rgb += col * vload3f(lights[li].color) * lights[li].intensity
-					* diff;
+				float ndl = fmax(dot3(n, ldir), 0.0f);
+				float diff = (1.0f - (acos(clamp(ndl, -1.0f, 1.0f))
+						/ 1.5707963f)) * lights[li].intensity;
+				if (diff > 0.0f)
+					rgb += col * lcol * diff;
+				if (shininess > 0.0f)
+				{
+					float3 r = ldir - n * (2.0f * dot3(ldir, n));
+					float prod = dot3(norm3(r), rd);
+					if (prod > 0.0f)
+					{
+						float spec = reflectivity * pow(prod, shininess)
+							* lights[li].intensity;
+						rgb += lcol * spec;
+					}
+				}
 			}
-			li++;
 		}
 	}
 	out[id * 3 + 0] = rgb.x;
 	out[id * 3 + 1] = rgb.y;
 	out[id * 3 + 2] = rgb.z;
-	(void)frame;
 }

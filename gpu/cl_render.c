@@ -6,24 +6,16 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/22 23:50:00 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/22 23:50:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:14:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #define CL_TARGET_OPENCL_VERSION 120
-#include "../third_party/OpenCL/CL/cl.h"
+#include <CL/cl.h>
 #include "../main.h"
 #include <string.h>
 
-typedef struct s_gpu
-{
-	cl_context			ctx;
-	cl_command_queue	queue;
-	cl_program			prog;
-	cl_kernel			kern;
-	cl_device_id			dev;
-	int					ok;
-}	t_gpu;
+#define MAX_GPUS 8
 
 typedef struct s_gpu_obj
 {
@@ -33,6 +25,8 @@ typedef struct s_gpu_obj
 	float	color[3];
 	float	radius;
 	float	height;
+	float	shininess;
+	float	reflectivity;
 }	t_gpu_obj;
 
 typedef struct s_gpu_light
@@ -51,6 +45,35 @@ typedef struct s_gpu_cam
 	float	horizontal;
 	float	aspect;
 }	t_gpu_cam;
+
+typedef struct s_gpu_dev
+{
+	cl_device_id		dev;
+	cl_context			ctx;
+	cl_command_queue	queue;
+	cl_program			prog;
+	cl_kernel			kern;
+	cl_mem				b_out;
+	cl_mem				b_cam;
+	cl_mem				b_objs;
+	cl_mem				b_lights;
+	cl_uint				cu;
+	cl_uint				vendor_id;
+	char				name[128];
+	int					y_start;
+	int					y_count;
+}	t_gpu_dev;
+
+typedef struct s_gpu
+{
+	t_gpu_dev	devs[MAX_GPUS];
+	int			ndevs;
+	int			scene_uploaded;
+	int			nobj;
+	int			nlight;
+	float		*fb;
+	int			ok;
+}	t_gpu;
 
 static char	*load_file(const char *path, size_t *out_len)
 {
@@ -78,105 +101,226 @@ static char	*load_file(const char *path, size_t *out_len)
 	return (buf);
 }
 
-static int	pick_device(cl_device_id *dev)
+static int	already_picked(t_gpu *g, cl_uint vendor_id, const char *name)
 {
-	cl_uint			np;
-	cl_uint			nd;
-	cl_platform_id	plats[8];
-	cl_device_id		devs[8];
-	cl_uint			i;
-	cl_uint			j;
+	int	k;
 
-	if (clGetPlatformIDs(8, plats, &np) != CL_SUCCESS || np == 0)
-		return (0);
-	i = 0;
-	while (i < np)
+	k = 0;
+	while (k < g->ndevs)
 	{
-		if (clGetDeviceIDs(plats[i], CL_DEVICE_TYPE_GPU, 8, devs, &nd)
-			== CL_SUCCESS && nd > 0)
-		{
-			*dev = devs[0];
+		if (g->devs[k].vendor_id == vendor_id
+			&& strcmp(g->devs[k].name, name) == 0)
 			return (1);
-		}
-		i++;
-	}
-	i = 0;
-	while (i < np)
-	{
-		if (clGetDeviceIDs(plats[i], CL_DEVICE_TYPE_ALL, 8, devs, &nd)
-			== CL_SUCCESS && nd > 0)
-		{
-			j = 0;
-			while (j < nd)
-			{
-				*dev = devs[j];
-				return (1);
-			}
-		}
-		i++;
+		k++;
 	}
 	return (0);
 }
 
+static void	collect_gpu_devices(t_gpu *g)
+{
+	cl_platform_id	plats[8];
+	cl_device_id	devs[8];
+	cl_uint			np;
+	cl_uint			nd;
+	cl_uint			i;
+	cl_uint			j;
+	char			name[128];
+	cl_uint			vid;
+	cl_uint			cu;
+
+	g->ndevs = 0;
+	if (clGetPlatformIDs(8, plats, &np) != CL_SUCCESS || np == 0)
+		return ;
+	i = 0;
+	while (i < np && g->ndevs < MAX_GPUS)
+	{
+		if (clGetDeviceIDs(plats[i], CL_DEVICE_TYPE_GPU, 8, devs, &nd)
+			== CL_SUCCESS && nd > 0)
+		{
+			j = 0;
+			while (j < nd && g->ndevs < MAX_GPUS)
+			{
+				name[0] = 0;
+				vid = 0;
+				cu = 1;
+				clGetDeviceInfo(devs[j], CL_DEVICE_NAME,
+					sizeof(name), name, NULL);
+				clGetDeviceInfo(devs[j], CL_DEVICE_VENDOR_ID,
+					sizeof(vid), &vid, NULL);
+				clGetDeviceInfo(devs[j], CL_DEVICE_MAX_COMPUTE_UNITS,
+					sizeof(cu), &cu, NULL);
+				if (!already_picked(g, vid, name))
+				{
+					g->devs[g->ndevs].dev = devs[j];
+					g->devs[g->ndevs].vendor_id = vid;
+					g->devs[g->ndevs].cu = cu ? cu : 1;
+					snprintf(g->devs[g->ndevs].name,
+						sizeof(g->devs[g->ndevs].name), "%s", name);
+					g->ndevs++;
+				}
+				j++;
+			}
+		}
+		i++;
+	}
+}
+
+static void	assign_row_bands(t_gpu *g)
+{
+	unsigned int	total_cu;
+	int				i;
+	int				y;
+	int				rows;
+
+	total_cu = 0;
+	i = 0;
+	while (i < g->ndevs)
+	{
+		total_cu += g->devs[i].cu;
+		i++;
+	}
+	if (total_cu == 0)
+		total_cu = (unsigned int)g->ndevs;
+	y = 0;
+	i = 0;
+	while (i < g->ndevs)
+	{
+		g->devs[i].y_start = y;
+		if (i == g->ndevs - 1)
+			rows = HEIGHT - y;
+		else
+		{
+			rows = (int)(((long)HEIGHT * g->devs[i].cu) / total_cu);
+			if (rows < 1)
+				rows = 1;
+			if (y + rows > HEIGHT - (g->ndevs - 1 - i))
+				rows = HEIGHT - (g->ndevs - 1 - i) - y;
+		}
+		g->devs[i].y_count = rows;
+		y += rows;
+		i++;
+	}
+}
+
+static int	init_one_dev(t_gpu_dev *d, const char *src, size_t slen)
+{
+	cl_int	err;
+	char	logbuf[4096];
+	size_t	logn;
+
+	d->ctx = clCreateContext(NULL, 1, &d->dev, NULL, NULL, &err);
+	if (err != CL_SUCCESS)
+		return (0);
+	d->queue = clCreateCommandQueue(d->ctx, d->dev, 0, &err);
+	if (err != CL_SUCCESS)
+		return (0);
+	d->prog = clCreateProgramWithSource(d->ctx, 1, &src, &slen, &err);
+	if (err != CL_SUCCESS)
+		return (0);
+	err = clBuildProgram(d->prog, 1, &d->dev, "-cl-std=CL1.2", NULL, NULL);
+	if (err != CL_SUCCESS)
+	{
+		logn = 0;
+		clGetProgramBuildInfo(d->prog, d->dev, CL_PROGRAM_BUILD_LOG,
+			sizeof(logbuf) - 1, logbuf, &logn);
+		logbuf[logn] = 0;
+		printf("[rt] OpenCL build failed on %s:\n%s\n", d->name, logbuf);
+		return (0);
+	}
+	d->kern = clCreateKernel(d->prog, "trace_frame", &err);
+	return (err == CL_SUCCESS);
+}
+
 int	gpu_init(t_vars *vars)
 {
-	t_gpu		*g;
-	char		*src;
-	size_t		slen;
-	cl_int		err;
-	char		logbuf[2048];
-	size_t		logn;
+	t_gpu	*g;
+	char	*src;
+	size_t	slen;
+	int		i;
+	int		good;
 
 	vars->gpu = NULL;
 	vars->gpu_ok = 0;
 	if (!vars->use_gpu)
 		return (0);
 	g = ft_calloc(1, sizeof(t_gpu));
-	if (!g || !pick_device(&g->dev))
-		return (free(g), printf("[rt] OpenCL: no device (install mesa/intel ICD)\n"), 0);
-	g->ctx = clCreateContext(NULL, 1, &g->dev, NULL, NULL, &err);
-	if (err != CL_SUCCESS)
-		return (free(g), 0);
-	g->queue = clCreateCommandQueue(g->ctx, g->dev, 0, &err);
+	if (!g)
+		return (0);
+	collect_gpu_devices(g);
+	if (g->ndevs == 0)
+		return (free(g),
+			printf("[rt] OpenCL: no GPU found (check OCL_ICD_VENDORS / RUSTICL_ENABLE)\n"),
+			0);
 	src = load_file("gpu/kernels/trace.cl", &slen);
 	if (!src)
-		return (printf("[rt] OpenCL: missing gpu/kernels/trace.cl\n"), 0);
-	g->prog = clCreateProgramWithSource(g->ctx, 1, (const char **)&src,
-			&slen, &err);
-	free(src);
-	err = clBuildProgram(g->prog, 1, &g->dev, "-cl-std=CL1.2", NULL, NULL);
-	if (err != CL_SUCCESS)
+		return (free(g), printf("[rt] OpenCL: missing gpu/kernels/trace.cl\n"), 0);
+	good = 0;
+	i = 0;
+	while (i < g->ndevs)
 	{
-		clGetProgramBuildInfo(g->prog, g->dev, CL_PROGRAM_BUILD_LOG,
-			sizeof(logbuf), logbuf, &logn);
-		printf("[rt] OpenCL build failed:\n%s\n", logbuf);
-		return (0);
+		if (init_one_dev(&g->devs[i], src, slen))
+		{
+			if (good != i)
+				g->devs[good] = g->devs[i];
+			good++;
+		}
+		i++;
 	}
-	g->kern = clCreateKernel(g->prog, "trace_frame", &err);
-	if (err != CL_SUCCESS)
-		return (0);
+	free(src);
+	g->ndevs = good;
+	if (g->ndevs == 0)
+		return (free(g), 0);
+	assign_row_bands(g);
+	g->fb = calloc(WIDTH * HEIGHT * 3, sizeof(float));
+	if (!g->fb)
+		return (gpu_shutdown(vars), free(g), 0);
 	g->ok = 1;
 	vars->gpu = g;
 	vars->gpu_ok = 1;
-	printf("[rt] OpenCL GPU path ready (RT_USE_GPU=1)\n");
+	printf("[rt] OpenCL multi-GPU ready (%d device%s):\n",
+		g->ndevs, g->ndevs > 1 ? "s" : "");
+	i = 0;
+	while (i < g->ndevs)
+	{
+		printf("  - GPU #%d: %s (%u CU) -> rows [%d..%d)\n",
+			i, g->devs[i].name, g->devs[i].cu,
+			g->devs[i].y_start, g->devs[i].y_start + g->devs[i].y_count);
+		i++;
+	}
+	fflush(stdout);
 	return (1);
 }
 
 void	gpu_shutdown(t_vars *vars)
 {
 	t_gpu	*g;
+	int		i;
 
 	g = (t_gpu *)vars->gpu;
 	if (!g)
 		return ;
-	if (g->kern)
-		clReleaseKernel(g->kern);
-	if (g->prog)
-		clReleaseProgram(g->prog);
-	if (g->queue)
-		clReleaseCommandQueue(g->queue);
-	if (g->ctx)
-		clReleaseContext(g->ctx);
+	i = 0;
+	while (i < g->ndevs)
+	{
+		if (g->devs[i].b_out)
+			clReleaseMemObject(g->devs[i].b_out);
+		if (g->devs[i].b_cam)
+			clReleaseMemObject(g->devs[i].b_cam);
+		if (g->devs[i].b_objs)
+			clReleaseMemObject(g->devs[i].b_objs);
+		if (g->devs[i].b_lights)
+			clReleaseMemObject(g->devs[i].b_lights);
+		if (g->devs[i].kern)
+			clReleaseKernel(g->devs[i].kern);
+		if (g->devs[i].prog)
+			clReleaseProgram(g->devs[i].prog);
+		if (g->devs[i].queue)
+			clReleaseCommandQueue(g->devs[i].queue);
+		if (g->devs[i].ctx)
+			clReleaseContext(g->devs[i].ctx);
+		i++;
+	}
+	free(g->fb);
 	free(g);
 	vars->gpu = NULL;
 	vars->gpu_ok = 0;
@@ -214,47 +358,29 @@ static void	pack_obj(t_gpu_obj *o, t_object *e)
 	o->color[2] = e->base_color.z;
 	o->radius = e->radius;
 	o->height = e->height;
+	o->shininess = e->has_material ? e->shininess : 0.0f;
+	o->reflectivity = e->reflectivity;
 	if (e->type == SPHERE)
 		o->radius = e->scale.x;
 }
 
-int	gpu_raytrace(t_vars *vars)
+static int	upload_scene_once(t_gpu *g, t_vars *vars)
 {
-	t_gpu			*g;
-	t_gpu_obj		objs[128];
-	t_gpu_light		lights[32];
-	t_gpu_cam		cam;
-	cl_mem			out;
-	cl_mem			b_objs;
-	cl_mem			b_lights;
-	cl_mem			b_cam;
-	cl_int			err;
-	float			*fb;
-	size_t			global;
-	int				i;
-	float			amb[4];
-	int				nobj;
-	int				nlight;
-	int				w;
-	int				h;
+	t_gpu_obj	objs[128];
+	t_gpu_light	lights[32];
+	t_gpu_cam	cam;
+	cl_int		err;
+	int			i;
 
-	g = (t_gpu *)vars->gpu;
-	if (!g || !g->ok)
-		return (0);
-	vars->frames++;
-	nobj = vars->pos;
-	if (nobj > 128)
-		nobj = 128;
-	nlight = vars->pos1;
-	if (nlight > 32)
-		nlight = 32;
-	w = WIDTH;
-	h = HEIGHT;
+	if (g->scene_uploaded)
+		return (1);
+	g->nobj = vars->pos > 128 ? 128 : vars->pos;
+	g->nlight = vars->pos1 > 32 ? 32 : vars->pos1;
 	i = -1;
-	while (++i < nobj)
+	while (++i < g->nobj)
 		pack_obj(&objs[i], &vars->objects[i]);
 	i = -1;
-	while (++i < nlight)
+	while (++i < g->nlight)
 	{
 		lights[i].pos[0] = vars->lights[i].position.x;
 		lights[i].pos[1] = vars->lights[i].position.y;
@@ -265,54 +391,95 @@ int	gpu_raytrace(t_vars *vars)
 		lights[i].intensity = vars->lights[i].intensity;
 	}
 	pack_cam(&cam, &vars->camera);
-	amb[0] = vars->ambient ? vars->ambient->color.x : 0;
-	amb[1] = vars->ambient ? vars->ambient->color.y : 0;
-	amb[2] = vars->ambient ? vars->ambient->color.z : 0;
-	amb[3] = 0;
-	fb = calloc(WIDTH * HEIGHT * 3, sizeof(float));
-	out = clCreateBuffer(g->ctx, CL_MEM_WRITE_ONLY,
-			sizeof(float) * WIDTH * HEIGHT * 3, NULL, &err);
-	b_objs = clCreateBuffer(g->ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(t_gpu_obj) * (nobj ? nobj : 1), objs, &err);
-	b_lights = clCreateBuffer(g->ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(t_gpu_light) * (nlight ? nlight : 1), lights, &err);
-	b_cam = clCreateBuffer(g->ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(t_gpu_cam), &cam, &err);
-	clSetKernelArg(g->kern, 0, sizeof(cl_mem), &out);
-	clSetKernelArg(g->kern, 1, sizeof(cl_mem), &b_cam);
-	clSetKernelArg(g->kern, 2, sizeof(cl_mem), &b_objs);
-	clSetKernelArg(g->kern, 3, sizeof(int), &nobj);
-	clSetKernelArg(g->kern, 4, sizeof(cl_mem), &b_lights);
-	clSetKernelArg(g->kern, 5, sizeof(int), &nlight);
-	clSetKernelArg(g->kern, 6, sizeof(cl_float3), amb);
-	clSetKernelArg(g->kern, 7, sizeof(int), &w);
-	clSetKernelArg(g->kern, 8, sizeof(int), &h);
-	clSetKernelArg(g->kern, 9, sizeof(int), &vars->frames);
-	global = (size_t)WIDTH * (size_t)HEIGHT;
-	err = clEnqueueNDRangeKernel(g->queue, g->kern, 1, NULL, &global,
-			NULL, 0, NULL, NULL);
-	if (err != CL_SUCCESS)
-		return (free(fb), 0);
-	clEnqueueReadBuffer(g->queue, out, CL_TRUE, 0,
-			sizeof(float) * WIDTH * HEIGHT * 3, fb, 0, NULL, NULL);
+	i = 0;
+	while (i < g->ndevs)
+	{
+		t_gpu_dev *d = &g->devs[i];
+		d->b_out = clCreateBuffer(d->ctx, CL_MEM_WRITE_ONLY,
+				sizeof(float) * WIDTH * d->y_count * 3, NULL, &err);
+		d->b_objs = clCreateBuffer(d->ctx,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(t_gpu_obj) * (g->nobj ? g->nobj : 1), objs, &err);
+		d->b_lights = clCreateBuffer(d->ctx,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(t_gpu_light) * (g->nlight ? g->nlight : 1), lights, &err);
+		d->b_cam = clCreateBuffer(d->ctx,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(t_gpu_cam), &cam, &err);
+		if (!d->b_out || !d->b_objs || !d->b_lights || !d->b_cam)
+			return (0);
+		i++;
+	}
+	g->scene_uploaded = 1;
+	return (1);
+}
+
+int	gpu_raytrace(t_vars *vars)
+{
+	t_gpu	*g;
+	float	amb[4];
+	int		w;
+	int		h;
+	int		i;
+	cl_int	err;
+
+	g = (t_gpu *)vars->gpu;
+	if (!g || !g->ok || !upload_scene_once(g, vars))
+		return (0);
+	vars->frames++;
+	w = WIDTH;
+	h = HEIGHT;
+	amb[0] = vars->ambient ? vars->ambient->color.x : 0.0f;
+	amb[1] = vars->ambient ? vars->ambient->color.y : 0.0f;
+	amb[2] = vars->ambient ? vars->ambient->color.z : 0.0f;
+	amb[3] = 0.0f;
+	i = 0;
+	while (i < g->ndevs)
+	{
+		t_gpu_dev	*d = &g->devs[i];
+		size_t		global = (size_t)WIDTH * (size_t)d->y_count;
+
+		clSetKernelArg(d->kern, 0, sizeof(cl_mem), &d->b_out);
+		clSetKernelArg(d->kern, 1, sizeof(cl_mem), &d->b_cam);
+		clSetKernelArg(d->kern, 2, sizeof(cl_mem), &d->b_objs);
+		clSetKernelArg(d->kern, 3, sizeof(int), &g->nobj);
+		clSetKernelArg(d->kern, 4, sizeof(cl_mem), &d->b_lights);
+		clSetKernelArg(d->kern, 5, sizeof(int), &g->nlight);
+		clSetKernelArg(d->kern, 6, sizeof(cl_float3), amb);
+		clSetKernelArg(d->kern, 7, sizeof(int), &w);
+		clSetKernelArg(d->kern, 8, sizeof(int), &h);
+		clSetKernelArg(d->kern, 9, sizeof(int), &d->y_start);
+		clSetKernelArg(d->kern, 10, sizeof(int), &d->y_count);
+		clSetKernelArg(d->kern, 11, sizeof(int), &vars->frames);
+		err = clEnqueueNDRangeKernel(d->queue, d->kern, 1, NULL, &global,
+				NULL, 0, NULL, NULL);
+		if (err != CL_SUCCESS)
+			return (0);
+		clFlush(d->queue);
+		i++;
+	}
+	i = 0;
+	while (i < g->ndevs)
+	{
+		t_gpu_dev	*d = &g->devs[i];
+		size_t		bytes = sizeof(float) * WIDTH * d->y_count * 3;
+		float		*dst = g->fb + ((size_t)d->y_start * WIDTH * 3);
+
+		err = clEnqueueReadBuffer(d->queue, d->b_out, CL_TRUE, 0,
+				bytes, dst, 0, NULL, NULL);
+		if (err != CL_SUCCESS)
+			return (0);
+		i++;
+	}
 	i = -1;
 	while (++i < WIDTH * HEIGHT)
 	{
 		t_vector	c;
-		int			y;
-		int			x;
 
-		y = i / WIDTH;
-		x = i % WIDTH;
-		c = new_vec(fb[i * 3], fb[i * 3 + 1], fb[i * 3 + 2]);
+		c = new_vec(g->fb[i * 3], g->fb[i * 3 + 1], g->fb[i * 3 + 2]);
 		vars->buffer_img[i] = add_vec(vars->buffer_img[i], c);
 		c = scale_vec(vars->buffer_img[i], 1.0f / vars->frames);
-		set_pixel(vars->image, x, y, c);
+		set_pixel(vars->image, i % WIDTH, i / WIDTH, c);
 	}
-	clReleaseMemObject(out);
-	clReleaseMemObject(b_objs);
-	clReleaseMemObject(b_lights);
-	clReleaseMemObject(b_cam);
-	free(fb);
 	return (1);
 }

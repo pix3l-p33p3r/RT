@@ -13,12 +13,17 @@
 NAME = rt
 
 CC = cc
-CFLAGS = -Wall -Wextra -Werror 
+CFLAGS = -Wall -Wextra -Werror -std=gnu11
 CFLAGS += -Ofast
 # CFLAGS += -fsanitize=address -fsanitize=leak -g3 
 LDFLAGS = -lmlx -lm -lXext -lX11 -lz -pthread -lOpenCL
+ifeq ($(RT_NIX_OPENCL),1)
+CFLAGS += -I/usr/local/include
+LDFLAGS += -L/usr/local/lib -lbsd
+else
 LDFLAGS += -L./third_party/OpenCL/lib -Wl,-rpath,./third_party/OpenCL/lib
 CFLAGS += -I./third_party/OpenCL
+endif
 
 SRCS = 	./parsing/miniRT.c\
 	  	./parsing/check_elements.c\

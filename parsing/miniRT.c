@@ -99,9 +99,7 @@ void	read_scenes(char *filename, t_vars *var)
 void	check_element(char *str)
 {
 	t_elem	elem;
-	int		i;
 
-	i = 0;
 	init_vars(&elem, str);
 	while (1)
 	{

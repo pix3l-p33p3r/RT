@@ -84,7 +84,7 @@ Still to implement for a solid options pack:
 ### Exotic / 125 fuel (subject + “unlisted” eval points)
 
 - [x] **Multithreading (pthread)** — row bands across `nproc` threads (default path)
-- [x] **GPU compute (OpenCL)** — `RT_USE_GPU=1`; needs ICD (`mesa-opencl-icd` / `intel-opencl-icd`). Falls back to threads if no device.
+- [x] **GPU compute (OpenCL dual-GPU)** — `RT_USE_GPU=1` inside `nix-enter nix develop`; splits rows across AMD RX 6500 + Intel UHD 770 weighted by CUs. Falls back to threads if no device.
 - [ ] Distributed render over multiple machines
 - [ ] Quadrics / quartics
 - [ ] Video clips from your frames

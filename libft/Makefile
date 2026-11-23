@@ -12,7 +12,7 @@
 
 NAME = libft.a
 
-CFLAGS = -Wall -Werror -Wextra -Ofast
+CFLAGS = -Wall -Werror -Wextra -Wno-unused-result -std=gnu11 -Ofast
 #CFLAGS += -fsanitize=address -g3
 
 SRCS = ft_atoi.c \
