@@ -6,46 +6,33 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/22 23:28:00 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/22 23:28:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:28:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../main.h"
 
-/* Unit cone in object space: x^2 + y^2 - z^2 = 0, |z| <= 1, caps at z=±1. */
-
-static int	cone_side_t(t_ray *back_ray, t_vector *vhat, float *t, t_vector *poi)
+static int	cone_side_t(t_ray *back_ray, t_vector *vhat,
+		float *t, t_vector *poi)
 {
-	float		a;
-	float		b;
-	float		c;
-	float		disc;
-	float		s;
+	float		q[4];
 	t_vector	p;
 
 	p = back_ray->point1;
-	a = square(vhat->x) + square(vhat->y) - square(vhat->z);
-	b = 2.0f * (p.x * vhat->x + p.y * vhat->y - p.z * vhat->z);
-	c = square(p.x) + square(p.y) - square(p.z);
-	if (fabsf(a) < EPSILON)
+	q[0] = square(vhat->x) + square(vhat->y) - square(vhat->z);
+	q[1] = 2.0f * (p.x * vhat->x + p.y * vhat->y - p.z * vhat->z);
+	q[2] = square(p.x) + square(p.y) - square(p.z);
+	if (fabsf(q[0]) < EPSILON)
 		return (0);
-	disc = square(b) - (4.0f * a * c);
-	if (disc < 0.0f)
+	q[3] = square(q[1]) - (4.0f * q[0] * q[2]);
+	if (q[3] < 0.0f)
 		return (0);
-	s = sqrtf(disc);
-	t[0] = (-b + s) / (2.0f * a);
-	t[1] = (-b - s) / (2.0f * a);
+	q[3] = sqrtf(q[3]);
+	t[0] = (-q[1] + q[3]) / (2.0f * q[0]);
+	t[1] = (-q[1] - q[3]) / (2.0f * q[0]);
 	poi[0] = add_vec(back_ray->point1, scale_vec(*vhat, t[0]));
 	poi[1] = add_vec(back_ray->point1, scale_vec(*vhat, t[1]));
 	return (1);
-}
-
-static void	cone_clip_side(float *t, t_vector *poi)
-{
-	if (!(t[0] > 0.0f && fabsf(poi[0].z) < 1.0f))
-		t[0] = 100e6;
-	if (!(t[1] > 0.0f && fabsf(poi[1].z) < 1.0f))
-		t[1] = 100e6;
 }
 
 static void	cone_caps(t_ray *back_ray, t_vector *vhat, float *t, t_vector *poi)
@@ -75,7 +62,12 @@ static void	cone_get_distance(t_ray *back_ray, t_vector *vhat,
 		t[1] = 100e6;
 	}
 	else
-		cone_clip_side(t, poi);
+	{
+		if (!(t[0] > 0.0f && fabsf(poi[0].z) < 1.0f))
+			t[0] = 100e6;
+		if (!(t[1] > 0.0f && fabsf(poi[1].z) < 1.0f))
+			t[1] = 100e6;
+	}
 	cone_caps(back_ray, vhat, t, poi);
 }
 

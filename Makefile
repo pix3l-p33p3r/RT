@@ -13,7 +13,7 @@
 NAME = rt
 
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -std=gnu11
+CFLAGS = -Wall -Wextra -Werror -std=gnu11 -DCL_TARGET_OPENCL_VERSION=120
 CFLAGS += -Ofast
 # CFLAGS += -fsanitize=address -fsanitize=leak -g3 
 LDFLAGS = -lmlx -lm -lXext -lX11 -lz -pthread -lOpenCL
@@ -32,6 +32,7 @@ SRCS = 	./parsing/miniRT.c\
 	  	./parsing/get_next_line/get_next_line.c\
 	  	./parsing/get_next_line/get_next_line_utils.c\
 		./parsing/check_objects.c\
+		./parsing/check_cone.c\
 		./parsing/myatoi.c\
 		vector.c \
 		vector1.c \
@@ -58,7 +59,11 @@ SRCS = 	./parsing/miniRT.c\
 		Objects/Cone.c \
 		Objects/Cone_utils.c \
 		Parallel/threads.c \
+		gpu/cl_init.c \
+		gpu/cl_setup.c \
+		gpu/cl_scene.c \
 		gpu/cl_render.c \
+		cleanup.c \
 		main.c
 
 OBJS = $(SRCS:.c=.o)

@@ -1,0 +1,18 @@
+---
+description: Enforce 42 Norminette on all RT C/H sources
+globs: **/*.{c,h}
+alwaysApply: true
+---
+
+# 42 Norminette (RT)
+
+- Every `.c` and `.h` file in `RT/` (excluding `third_party/` and `tests/`) MUST pass `norminette` with zero errors before committing.
+- Key rules:
+  - 42 header at top of every `.c`/`.h`
+  - Max 25 lines per function, max 5 functions per `.c` file
+  - Max 4 parameters per function, max 5 local variable declarations per function
+  - Max 80 columns per line; tabs for indentation
+  - No `for`, no ternary `?:`, no declaration+assignment on the same line, no comments inside function/struct scopes
+  - `#include` at start of file (put compile-time `-D` defines in `Makefile`)
+- Run before commit:
+  `norminette Image Material Matrix Objects Parallel Transformation gpu libft parsing camera.c cleanup.c main.c main.h raytrace.c raytrace_utils.c vector.c vector1.c vector2.c`

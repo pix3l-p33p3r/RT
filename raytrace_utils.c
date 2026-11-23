@@ -6,7 +6,7 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/26 23:21:23 by elel-yak          #+#    #+#             */
-/*   Updated: 2023/12/27 17:59:17 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:28:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,22 +29,12 @@ float	random_float(unsigned int *rng_state, float min, float max)
 		) * (max - min));
 }
 
-void	initialize_raytrace(t_vars *vars, t_norm1 *norm)
-{
-	norm->xfact = 1.0 / ((float)(WIDTH) / 2.0);
-	norm->yfact = 1.0 / ((float)(HEIGHT) / 2.0);
-	vars->frames++;
-	vars->rng_state = vars->frames;
-	norm->y = -1;
-	norm->intfound = 0;
-}
-
 void	process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng)
 {
 	norm->xoff = random_float(rng, -0.5, 0.5);
 	norm->yoff = random_float(rng, -0.5, 0.5);
-	norm->normx = ((float)(norm->x + norm->xoff) * norm->xfact) - 1.0;
-	norm->normy = ((float)(norm->y + norm->yoff) * norm->yfact) - 1.0;
+	norm->normx = (norm->xfact * (float)(norm->x + norm->xoff)) - 1.0;
+	norm->normy = (norm->yfact * (float)(norm->y + norm->yoff)) - 1.0;
 	norm->ray = generate_ray(norm->normx, norm->normy, &vars->camera);
 	norm->intfound = test_intersection(&norm->ray, vars->objects, &norm->info);
 	if (norm->intfound)
@@ -58,19 +48,20 @@ void	process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng)
 	}
 }
 
-void	raytrace_rows(t_vars *vars, int y0, int y1, unsigned int rng,
-		float xfact, float yfact)
+void	raytrace_rows(t_thr_arg *arg)
 {
-	t_norm1	norm;
+	t_norm1			norm;
+	unsigned int	rng;
 
-	norm.xfact = xfact;
-	norm.yfact = yfact;
-	norm.y = y0 - 1;
-	while (++norm.y < y1)
+	norm.xfact = arg->xfact;
+	norm.yfact = arg->yfact;
+	rng = arg->rng;
+	norm.y = arg->y0 - 1;
+	while (++norm.y < arg->y1)
 	{
 		norm.x = -1;
 		while (++norm.x < WIDTH)
-			process_pixel(vars, &norm, &rng);
+			process_pixel(arg->vars, &norm, &rng);
 	}
 }
 

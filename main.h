@@ -96,17 +96,16 @@ typedef struct s_info
 	t_vector		normal;
 }	t_info;
 
-// parse 
 typedef struct s_object
 {
-	int			type; // parse
-	t_vector	translation; // parse
+	int			type;
+	t_vector	translation;
 	t_vector	rotation;
-	t_vector	scale; // parse
-	t_vector	d_normal; // parse
-	t_vector	base_color; // parse
-	float		radius; // parse
-	float		height; // parse
+	t_vector	scale;
+	t_vector	d_normal;
+	t_vector	base_color;
+	float		radius;
+	float		height;
 	int			has_material;
 	float		reflectivity;
 	float		shininess;
@@ -234,13 +233,21 @@ typedef struct s_norm6
 	float		blue;
 }	t_norm6;
 
-//raytrace_utils
+typedef struct s_thr_arg
+{
+	t_vars			*vars;
+	int				y0;
+	int				y1;
+	unsigned int	rng;
+	float			xfact;
+	float			yfact;
+}	t_thr_arg;
+
 unsigned int	rand_pcg(unsigned int *rng_state);
 float			random_float(unsigned int *rng_state, float min, float max);
 void			initialize_raytrace(t_vars *vars, t_norm1 *norm);
 void			process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng);
-void			raytrace_rows(t_vars *vars, int y0, int y1, unsigned int rng,
-					float xfact, float yfact);
+void			raytrace_rows(t_thr_arg *arg);
 int				rt_thread_count(void);
 void			threaded_raytrace(t_vars *vars);
 void			raytrace(t_vars *vars);

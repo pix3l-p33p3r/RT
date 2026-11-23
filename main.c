@@ -6,7 +6,7 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/08 04:36:04 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/23 00:20:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:28:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,60 +14,6 @@
 #include "libft/libft.h"
 #include "parsing/miniRT.h"
 #include <string.h>
-
-void	cleanup_vars(t_vars *vars)
-{
-	int	i;
-
-	gpu_shutdown(vars);
-	if (vars->objects)
-	{
-		i = 0;
-		while (i < vars->pos)
-		{
-			if (vars->objects[i].gtfm)
-			{
-				delete_matrix(vars->objects[i].gtfm[0]);
-				delete_matrix(vars->objects[i].gtfm[1]);
-				free(vars->objects[i].gtfm);
-			}
-			i++;
-		}
-		free(vars->objects);
-		vars->objects = NULL;
-	}
-	free(vars->lights);
-	vars->lights = NULL;
-	free(vars->ambient);
-	vars->ambient = NULL;
-	if (vars->image)
-		delete_image(vars->image);
-	vars->image = NULL;
-	free(vars->buffer_img);
-	vars->buffer_img = NULL;
-	if (vars->mlx && vars->mlx_img)
-	{
-		if (vars->mlx_img->img)
-			mlx_destroy_image(vars->mlx, vars->mlx_img->img);
-		free(vars->mlx_img);
-		vars->mlx_img = NULL;
-	}
-	if (vars->mlx && vars->win)
-		mlx_destroy_window(vars->mlx, vars->win);
-	if (vars->mlx)
-	{
-		mlx_destroy_display(vars->mlx);
-		free(vars->mlx);
-		vars->mlx = NULL;
-	}
-}
-
-int	close_hook(t_vars *vars)
-{
-	cleanup_vars(vars);
-	exit(0);
-	return (0);
-}
 
 int	loop(t_vars *vars)
 {
@@ -95,18 +41,27 @@ int	expose_hook(t_vars *vars)
 	return (0);
 }
 
-static int	read_max_frames(void)
+static void	init_scene_and_mlx(t_vars *vars, char *path)
 {
 	char	*env;
-	int		n;
 
+	vars->use_gpu = (getenv("RT_USE_GPU")
+			&& strcmp(getenv("RT_USE_GPU"), "1") == 0);
 	env = getenv("RT_MAX_FRAMES");
-	if (!env)
-		return (1337);
-	n = atoi(env);
-	if (n < 1)
-		return (1);
-	return (n);
+	vars->max_frames = 1337;
+	if (env && atoi(env) > 0)
+		vars->max_frames = atoi(env);
+	vars->len = 100;
+	vars->objects = ft_calloc(vars->len + 1, sizeof(t_object));
+	vars->len1 = 100;
+	vars->lights = ft_calloc(vars->len1 + 1, sizeof(t_light));
+	check_element(path);
+	read_scenes(path, vars);
+	vars->image = new_image();
+	vars->buffer_img = calloc(WIDTH * HEIGHT, sizeof(t_vector));
+	vars->mlx = mlx_init();
+	vars->win = mlx_new_window(vars->mlx, WIDTH, HEIGHT, "rt");
+	vars->mlx_img = new_mlx_img(vars);
 }
 
 int	main(int ac, char **av)
@@ -116,23 +71,7 @@ int	main(int ac, char **av)
 	vars = (t_vars){0};
 	if (ac != 2 || check_extention(av[1]) == 1)
 		return (1);
-	vars.use_gpu = (getenv("RT_USE_GPU")
-			&& strcmp(getenv("RT_USE_GPU"), "1") == 0);
-	vars.max_frames = read_max_frames();
-	vars.pos = 0;
-	vars.len = 100;
-	vars.objects = ft_calloc(vars.len + 1, sizeof(t_object));
-	vars.pos1 = 0;
-	vars.len1 = 100;
-	vars.lights = ft_calloc(vars.len1 + 1, sizeof(t_light));
-	check_element(av[1]);
-	read_scenes(av[1], &vars);
-	vars.image = new_image();
-	vars.buffer_img = calloc(WIDTH * HEIGHT, sizeof(t_vector));
-	vars.mlx = mlx_init();
-	vars.win = mlx_new_window(vars.mlx, WIDTH, HEIGHT, "rt");
-	vars.mlx_img = new_mlx_img(&vars);
-	vars.frames = 0;
+	init_scene_and_mlx(&vars, av[1]);
 	if (!gpu_init(&vars))
 	{
 		printf("[rt] CPU pthread renderer ready (%d threads)\n",
