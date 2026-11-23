@@ -23,7 +23,7 @@ void	gpu_reset_camera(t_vars *vars)
 	g = (t_gpu *)vars->gpu;
 	if (!g->scene_uploaded)
 		return ;
-	cl_pack_cam(&cam, &vars->camera);
+	cl_pack_cam(&cam, vars);
 	i = 0;
 	while (i < g->ndevs)
 	{

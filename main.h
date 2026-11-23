@@ -38,6 +38,8 @@ enum
 	HALF_SPHERE = 6,
 	DISK = 7,
 	PARABOLOID = 8,
+	TORUS = 9,
+	NEG_SPHERE = 10,
 };
 
 enum
@@ -136,6 +138,7 @@ typedef struct s_object
 	int			pattern;
 	float		bump;
 	t_ppm		*tex;
+	int			is_neg;
 	t_matrix	**gtfm;
 	int			(*hit)(t_ray *ray, struct s_info *info);
 }	t_object;
@@ -146,6 +149,7 @@ typedef struct s_light
 	t_vector	color;
 	float		intensity;
 	int			is_dir;
+	float		radius;
 }	t_light;
 
 typedef struct s_ambiant
@@ -172,6 +176,7 @@ typedef struct s_vars
 	int				pos1;
 	int				len1;
 	int				max_frames;
+	int				stereo_mode;
 	int				use_gpu;
 	int				gpu_ok;
 	void			*gpu;
@@ -375,6 +380,14 @@ int				test_triangle(t_ray *ray, t_info *info);
 int				test_half_sphere(t_ray *ray, t_info *info);
 int				test_disk(t_ray *ray, t_info *info);
 int				test_paraboloid(t_ray *ray, t_info *info);
+int				test_torus(t_ray *ray, t_info *info);
+int				point_in_neg(t_vector p, t_object *objects);
+int				csg_carve_hit(t_ray *ray, t_object *objects, t_info *info);
+t_ray			stereo_eye_ray(t_vars *vars, float nx, float ny,
+					float eye_sign);
+t_vector		trace_stereo_pixel(t_vars *vars, t_norm1 *norm);
+t_vector		jitter_light_pos(t_light *light, unsigned int *rng);
+void			cycle_stereo(t_vars *vars);
 int				calculate_props(int min_index, t_vector *poi,
 					t_info *info, t_vector *vhat);
 int				cone_calculate_props(int min_index, t_vector *poi,

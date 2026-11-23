@@ -100,10 +100,9 @@ void	check_camera(t_vars *var, char *line, int i)
 void	check_light(t_vars *var, char *line, int i)
 {
 	t_light	light;
-	t_light	*tmp;
 
+	light = (t_light){0};
 	i++;
-	light.is_dir = 0;
 	light.position = parse_vector(line, &i);
 	light.intensity = parse_number(line, &i);
 	light.color = parse_vector(line, &i);
@@ -112,16 +111,12 @@ void	check_light(t_vars *var, char *line, int i)
 	check_numbers(light.color.y, 0, 255);
 	check_numbers(light.color.z, 0, 255);
 	light.color = scale_vec(light.color, 1.0f / 255.0f);
+	i = skip_space(line, i);
+	if (line[i])
+		light.radius = parse_number(line, &i);
+	check_numbers(light.radius, 0.0f, 20.0f);
 	if (line[i])
 		unexpected_error(line, i);
-	var->lights[var->pos1++] = light;
-	if (var->pos1 + 1 == var->len1)
-	{
-		tmp = ft_calloc(var->len1 * 2 + 1, sizeof(t_light));
-		ft_memcpy(tmp, var->lights, var->len1 * sizeof(t_light));
-		free(var->lights);
-		var->lights = tmp;
-		var->len1 = var->len1 * 2;
-	}
+	append_light(var, light);
 	free(line);
 }

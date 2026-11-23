@@ -12,22 +12,19 @@
 
 #include "cl_internal.h"
 
-void	cl_pack_cam(t_gpu_cam *c, t_camera *cam)
+void	cl_pack_cam(t_gpu_cam *c, t_vars *vars)
 {
-	c->origin[0] = cam->origin.x;
-	c->origin[1] = cam->origin.y;
-	c->origin[2] = cam->origin.z;
-	c->center[0] = cam->screen_center.x;
-	c->center[1] = cam->screen_center.y;
-	c->center[2] = cam->screen_center.z;
-	c->u[0] = cam->screen_u.x;
-	c->u[1] = cam->screen_u.y;
-	c->u[2] = cam->screen_u.z;
-	c->v[0] = cam->screen_v.x;
-	c->v[1] = cam->screen_v.y;
-	c->v[2] = cam->screen_v.z;
+	t_camera	*cam;
+
+	cam = &vars->camera;
+	ft_memcpy(c->origin, &cam->origin, sizeof(float) * 3);
+	ft_memcpy(c->center, &cam->screen_center, sizeof(float) * 3);
+	ft_memcpy(c->u, &cam->screen_u, sizeof(float) * 3);
+	ft_memcpy(c->v, &cam->screen_v, sizeof(float) * 3);
+	ft_memcpy(c->cam_u, &cam->cam_u, sizeof(float) * 3);
 	c->horizontal = cam->horizontal;
 	c->aspect = cam->aspect_ratio;
+	c->stereo_mode = vars->stereo_mode;
 }
 
 static void	pack_obj(t_gpu_obj *o, t_object *e)
@@ -48,6 +45,7 @@ static void	pack_obj(t_gpu_obj *o, t_object *e)
 	o->ior = e->ior;
 	o->pattern = e->pattern;
 	o->bump = e->bump;
+	o->is_neg = e->is_neg;
 	if (o->ior < 1.0f)
 		o->ior = 1.0f;
 	if (e->type == SPHERE)
@@ -74,8 +72,9 @@ static void	pack_scene(t_gpu *g, t_vars *vars, t_gpu_scene *sc)
 		ft_memcpy(sc->lights[i].color, &vars->lights[i].color, 12);
 		sc->lights[i].intensity = vars->lights[i].intensity;
 		sc->lights[i].is_dir = vars->lights[i].is_dir;
+		sc->lights[i].radius = vars->lights[i].radius;
 	}
-	cl_pack_cam(&sc->cam, &vars->camera);
+	cl_pack_cam(&sc->cam, vars);
 }
 
 static int	upload_to_dev(t_gpu *g, t_gpu_dev *d, t_gpu_scene *sc)

@@ -36,6 +36,7 @@ typedef struct s_gpu_obj
 	float	ior;
 	int		pattern;
 	float	bump;
+	int		is_neg;
 }	t_gpu_obj;
 
 typedef struct s_gpu_light
@@ -44,6 +45,7 @@ typedef struct s_gpu_light
 	float	color[3];
 	float	intensity;
 	int		is_dir;
+	float	radius;
 }	t_gpu_light;
 
 typedef struct s_gpu_cam
@@ -52,8 +54,10 @@ typedef struct s_gpu_cam
 	float	center[3];
 	float	u[3];
 	float	v[3];
+	float	cam_u[3];
 	float	horizontal;
 	float	aspect;
+	int		stereo_mode;
 }	t_gpu_cam;
 
 typedef struct s_gpu_dev
@@ -106,6 +110,6 @@ void	cl_collect_devices(t_gpu *g);
 void	cl_assign_bands(t_gpu *g);
 int		cl_init_device(t_gpu_dev *d, const char *src, size_t slen);
 int		cl_upload_scene(t_gpu *g, t_vars *vars);
-void	cl_pack_cam(t_gpu_cam *c, t_camera *cam);
+void	cl_pack_cam(t_gpu_cam *c, t_vars *vars);
 
 #endif

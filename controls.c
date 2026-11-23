@@ -93,6 +93,8 @@ int	handle_keypress(int keycode, t_vars *vars)
 		close_hook(vars);
 	else if (keycode == 112)
 		export_ppm(vars, "render_out.ppm");
+	else if (keycode == 118)
+		cycle_stereo(vars);
 	else if (keycode == 103)
 	{
 		vars->use_gpu = !vars->use_gpu;

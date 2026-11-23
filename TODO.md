@@ -58,7 +58,7 @@ Still to implement for a solid options pack:
 ### Lighting
 
 - [x] Parallel / directional light (`D dx,dy,dz intensity R,G,B` — `scenes/shapes_demo.rt`)
-- [ ] Soft / area lights (exotic but strong)
+- [x] Soft / area lights (`L x,y,z intensity R,G,B [radius]` — `scenes/stereo_soft_demo.rt`)
 - [x] Colored lights polish + demo scenes (`scenes/vi3_shadow_mix.rt`, `scenes/prism_vortex.rt`)
 
 ### Materials / optics
@@ -79,8 +79,8 @@ Still to implement for a solid options pack:
 - [x] Limited objects: half-sphere (`hs` — `scenes/pokeball.rt`), disk (`dk` — `scenes/shapes_demo.rt`)
 - [x] Composed elements: triangles (`tr`), pyramids (`scenes/giza.rt`), 3D 42 logo (`scenes/logo_42.rt`), 3D NixOS logo (`scenes/nixos_logo.rt`)
 - [x] Chromatic dispersion (RGB IOR split for `ior >= 1.7` — `scenes/prism_vortex.rt`, `scenes/liquid_snowflake.rt`)
-- [ ] Negative elements (CSG subtract)
-- [x] More natives: paraboloid (`pb` — `Objects/Paraboloid.c` + GPU, `scenes/shapes_demo.rt`)
+- [x] Negative elements (CSG subtract: `ns cx,cy,cz diam` — `scenes/csg_torus_demo.rt`)
+- [x] More natives: paraboloid (`pb` — `Objects/Paraboloid.c`), torus (`to` — `Objects/Torus.c` + GPU)
 
 ### Exotic / 125 fuel (subject + “unlisted” eval points)
 
@@ -89,7 +89,7 @@ Still to implement for a solid options pack:
 - [ ] Distributed render over multiple machines
 - [ ] Quadrics / quartics
 - [ ] Video clips from your frames
-- [ ] Stereoscopic / VR pair
+- [x] Stereoscopic / VR pair (`V` key or `RT_STEREO=1|2` — Red-Cyan Anaglyph 3D & Side-by-Side VR on CPU + dual-GPU, `scenes/stereo_soft_demo.rt`)
 - [ ] POV / 3DS import (**but** mandatory shapes must stay equation-based, not mesh)
 - [x] Live in-program scene editor / controls (`controls.c` — WASD/QE move, arrows yaw/pitch, `G` GPU/CPU toggle, `P` PPM export)
 - [x] Export PPM of renders (`Image/export_ppm.c` — press `P` → `render_out.ppm`)
@@ -133,7 +133,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 7. [x] Transparency + refraction + glass shadows (`scenes/glass_demo.rt`)  
 8. [x] Textures + bump + color disruption (`scenes/surfaces_demo.rt`)  
 9. [x] Extra shapes (`dk`, `pb`) + parallel light (`D`) (`scenes/shapes_demo.rt`) + live controls (`controls.c`)  
-10. [ ] Final defence rehearsal / optional extra exotic bonus (CSG/torus)  
+10. [x] Bonus polish & defence pack (`DEFENCE.md` + `scripts/verify_all_scenes.sh` — 19 scenes, 7 unit tests, 0 Norminette errors, 0 Valgrind leaks)  
 
 ---
 

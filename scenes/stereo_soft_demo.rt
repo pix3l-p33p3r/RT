@@ -1,0 +1,24 @@
+# Stereoscopic 3D / VR & soft area-light penumbra studio showcase
+# Engine coords: +X right, +Y forward, -Z UP
+# Press 'V' to cycle Mono -> Red-Cyan Anaglyph 3D -> Side-by-Side VR
+# Area lights: L x,y,z intensity R,G,B radius
+A 0.18 255,255,255
+C 0,-11.0,-3.0 0,0,-0.8 48
+L 5.5,-5.5,-8.5 0.90 255,245,230 0.9
+L -6.5,-4.5,-6.5 0.55 195,220,255 0.9
+
+# Checkered studio floor (z=0, pattern=1) + dark slate backdrop wall
+pl 0,0,0 0,0,-1 225,228,235 0.22 0.0 1.0 1 0.0
+pl 0,8.5,0 0,-1,0 50,58,76 0.04 0.0 1.0 0 0.0
+
+# Foreground layer (depth ~7 units, pops out of stereo focal plane at 8.0)
+sp -1.1,-4.2,-1.1 2.2 230,245,255 0.10 0.86 1.52
+sp 1.85,-4.8,-0.85 1.7 235,70,75 0.22 0.0 1.0
+
+# Midground layer (depth ~10-11 units, gold cone + chrome cylinder)
+cn 0.9,-1.2,-1.35 0,0,1 2.1 1.35 245,190,65 0.35 0.0 1.0
+cy -3.2,-0.5,-1.6 0,0,-1 1.6 1.6 220,230,242 0.82 0.0 1.0
+
+# Background layer (depth ~13.8-14.6 units, deep 3D stereo parallax)
+sp -1.2,3.4,-1.3 2.6 80,210,165 0.15 0.0 1.0 3 0.0
+sp 3.6,2.2,-1.45 2.9 75,145,235 0.35 0.0 1.0

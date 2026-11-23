@@ -88,6 +88,7 @@ t_vector	shadow_atten(t_light *light, t_object *objects, t_info *info)
 	t_norm4		norm;
 	t_info		test;
 	t_vector	atten;
+	t_vector	tint;
 	int			i;
 
 	init_shadow_ray(&norm, light, info);
@@ -96,18 +97,15 @@ t_vector	shadow_atten(t_light *light, t_object *objects, t_info *info)
 	while (objects[++i].gtfm)
 	{
 		test.e = &objects[i];
-		if (info->e == &objects[i] || !objects[i].hit(&norm.light_ray, &test)
+		if (objects[i].is_neg || info->e == &objects[i]
+			|| !objects[i].hit(&norm.light_ray, &test)
 			|| length(sub_vec(test.hitpoint, norm.light_ray.point1))
-			>= norm.lighdist)
+			>= norm.lighdist || point_in_neg(test.hitpoint, objects) >= 0)
 			continue ;
 		if (objects[i].transp <= 0.0f)
 			return (new_vec(0.0f, 0.0f, 0.0f));
-		atten = new_vec(atten.x * glass_tint(objects[i].base_color).x
-				* objects[i].transp,
-				atten.y * glass_tint(objects[i].base_color).y
-				* objects[i].transp,
-				atten.z * glass_tint(objects[i].base_color).z
-				* objects[i].transp);
+		tint = scale_vec(glass_tint(objects[i].base_color), objects[i].transp);
+		atten = new_vec(atten.x * tint.x, atten.y * tint.y, atten.z * tint.z);
 	}
 	return (atten);
 }

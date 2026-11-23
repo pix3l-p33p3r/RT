@@ -6,7 +6,7 @@
 /*   By: hchaguer <hchaguer@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/14 14:19:37 by elel-yak          #+#    #+#             */
-/*   Updated: 2023/12/27 01:16:33 by hchaguer         ###   ########.fr       */
+/*   Updated: 2026/11/23 04:05:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,25 +17,26 @@ int	test_intersection(t_ray *ray, t_object *objects, t_info *info)
 	t_norm2	norm;
 
 	norm.intfound = 0;
-	norm.validint = 0;
 	norm.mindist = 10e6;
 	norm.i = -1;
 	while (objects[++norm.i].gtfm)
 	{
+		if (objects[norm.i].is_neg)
+			continue ;
 		norm.test.e = &objects[norm.i];
 		norm.validint = objects[norm.i].hit(ray, &norm.test);
 		if (norm.validint == 1)
 		{
-			norm.intfound = 1;
 			norm.dist = length(sub_vec(norm.test.hitpoint, ray->point1));
 			if (norm.dist < norm.mindist)
 			{
+				norm.intfound = 1;
 				norm.mindist = norm.dist;
-				info->e = norm.test.e;
-				info->hitpoint = norm.test.hitpoint;
-				info->normal = norm.test.normal;
+				*info = norm.test;
 			}
 		}
 	}
-	return (norm.intfound);
+	if (norm.intfound)
+		return (csg_carve_hit(ray, objects, info));
+	return (0);
 }

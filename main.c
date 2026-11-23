@@ -40,6 +40,9 @@ static void	init_scene_and_mlx(t_vars *vars, char *path)
 
 	vars->use_gpu = (getenv("RT_USE_GPU")
 			&& strcmp(getenv("RT_USE_GPU"), "1") == 0);
+	env = getenv("RT_STEREO");
+	if (env && atoi(env) >= 0 && atoi(env) <= 2)
+		vars->stereo_mode = atoi(env);
 	env = getenv("RT_MAX_FRAMES");
 	vars->max_frames = 1337;
 	if (env && atoi(env) > 0)

@@ -35,6 +35,7 @@ SRCS = 	./parsing/miniRT.c\
 		./parsing/check_cone.c\
 		./parsing/check_extra.c\
 		./parsing/check_shapes2.c\
+		./parsing/check_bonus_shapes.c\
 		./parsing/myatoi.c\
 		vector.c \
 		vector1.c \
@@ -61,6 +62,7 @@ SRCS = 	./parsing/miniRT.c\
 		Material/refract.c \
 		Material/surface.c \
 		Material/ppm.c \
+		Material/stereo.c \
 		Objects/Cylinder.c \
  		Objects/Cylinder_utils.c \
 		Objects/Cone.c \
@@ -69,6 +71,8 @@ SRCS = 	./parsing/miniRT.c\
 		Objects/HalfSphere.c \
 		Objects/Disk.c \
 		Objects/Paraboloid.c \
+		Objects/Torus.c \
+		Objects/Csg.c \
 		Parallel/threads.c \
 		gpu/cl_init.c \
 		gpu/cl_setup.c \
@@ -110,10 +114,18 @@ test_shapes2:
 	$(CC) $(CFLAGS) -o tests/test_shapes2 tests/test_shapes2.c -lm
 	./tests/test_shapes2
 
+test_csg_torus:
+	$(CC) $(CFLAGS) -o tests/test_csg_torus tests/test_csg_torus.c -lm
+	./tests/test_csg_torus
+
+test_stereo:
+	$(CC) $(CFLAGS) -o tests/test_stereo tests/test_stereo.c -lm
+	./tests/test_stereo
+
 clean :
 	make clean -C ./libft
 	rm -rf $(OBJS)
-	rm -f tests/test_cone_quad tests/test_reflect tests/test_refract tests/test_surface tests/test_shapes2
+	rm -f tests/test_cone_quad tests/test_reflect tests/test_refract tests/test_surface tests/test_shapes2 tests/test_csg_torus tests/test_stereo
 
 fclean : clean
 	make fclean -C ./libft
@@ -121,4 +133,4 @@ fclean : clean
 
 re : fclean all
 
-.PHONY : all clean fclean re test_cone test_reflect test_refract test_surface test_shapes2
+.PHONY : all clean fclean re test_cone test_reflect test_refract test_surface test_shapes2 test_csg_torus test_stereo

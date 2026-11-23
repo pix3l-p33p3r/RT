@@ -10,6 +10,8 @@ tests/test_reflect
 tests/test_refract
 tests/test_surface
 tests/test_shapes2
+tests/test_csg_torus
+tests/test_stereo
 render_out.ppm
 
 # editor / OS

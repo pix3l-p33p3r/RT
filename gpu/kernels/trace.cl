@@ -17,6 +17,7 @@ typedef struct {
 	float	ior;
 	int		pattern;
 	float	bump;
+	int		is_neg;
 } GpuObj;
 
 typedef struct {
@@ -24,6 +25,7 @@ typedef struct {
 	float	color[3];
 	float	intensity;
 	int		is_dir;
+	float	radius;
 } GpuLight;
 
 typedef struct {
@@ -31,8 +33,10 @@ typedef struct {
 	float	center[3];
 	float	u[3];
 	float	v[3];
+	float	cam_u[3];
 	float	horizontal;
 	float	aspect;
+	int		stereo_mode;
 } GpuCam;
 
 static uint	pcg_hash(uint v)
@@ -421,6 +425,62 @@ static int	hit_paraboloid(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 	return (1);
 }
 
+static int	hit_torus(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+{
+	float3	pos = V3(o.pos);
+	float3	ax = norm3(V3(o.axis));
+	float3	ref = (fabs(ax.z) < 0.9f) ? (float3)(0, 0, 1) : (float3)(1, 0, 0);
+	float3	u = norm3(cross(ref, ax));
+	float3	v = cross(ax, u);
+	float3	oc = ro - pos;
+	float3	lo = (float3)(dot3(oc, u), dot3(oc, v), dot3(oc, ax));
+	float3	ld = norm3((float3)(dot3(rd, u), dot3(rd, v), dot3(rd, ax)));
+	float	rb = o.radius + o.height + 0.02f;
+	float	b = 2.0f * dot3(lo, ld);
+	float	c = dot3(lo, lo) - rb * rb;
+	float	disc = b * b - 4.0f * c;
+	if (disc < 0.0f)
+		return (0);
+	float	sd = sqrt(disc);
+	float	t0 = fmax((-b - sd) * 0.5f, 1e-3f);
+	float	t1 = (-b + sd) * 0.5f;
+	if (t1 < 1e-3f)
+		return (0);
+	float	tt = t0;
+	for (int s = 0; s < 48 && tt <= t1; s++)
+	{
+		float3 p = lo + ld * tt;
+		float q = sqrt(p.x * p.x + p.y * p.y) - o.radius;
+		float d = sqrt(q * q + p.z * p.z) - o.height;
+		if (fabs(d) < 1e-3f)
+		{
+			float qlen = fmax(sqrt(p.x * p.x + p.y * p.y), 1e-6f);
+			float fac = 1.0f - o.radius / qlen;
+			float3 wn = norm3(u * (p.x * fac) + v * (p.y * fac) + ax * p.z);
+			if (dot3(wn, rd) > 0.0f)
+				wn = -wn;
+			*t = tt;
+			*n = wn;
+			return (1);
+		}
+		tt += fmax(fabs(d), 1e-3f);
+	}
+	return (0);
+}
+
+static int	gpu_point_in_neg(float3 p, __global const GpuObj *objs, int nobj)
+{
+	for (int i = 0; i < nobj; i++)
+	{
+		if (!objs[i].is_neg)
+			continue ;
+		float3 d = p - V3(objs[i].pos);
+		if (dot3(d, d) < objs[i].radius * objs[i].radius)
+			return (i);
+	}
+	return (-1);
+}
+
 static float3	gpu_surface_color(float3 p, GpuObj o)
 {
 	float3	base_c = V3(o.color);
@@ -486,6 +546,8 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 	for (i = 0; i < nobj; i++)
 	{
 		GpuObj o = objs[i];
+		if (o.is_neg)
+			continue ;
 		t = 1e30f;
 		if (o.type == 1 && hit_sphere(ro, rd, o, &t, &nn))
 			;
@@ -502,6 +564,8 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 		else if (o.type == 7 && hit_disk(ro, rd, o, &t, &nn))
 			;
 		else if (o.type == 8 && hit_paraboloid(ro, rd, o, &t, &nn))
+			;
+		else if (o.type == 9 && hit_torus(ro, rd, o, &t, &nn))
 			;
 		else
 			continue ;
@@ -520,6 +584,32 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 			hit = 1;
 		}
 	}
+	if (hit)
+	{
+		int nidx = gpu_point_in_neg(ro + rd * (*tmin), objs, nobj);
+		if (nidx >= 0)
+		{
+			GpuObj neg = objs[nidx];
+			float3 oc = ro - V3(neg.pos);
+			float b = 2.0f * dot3(oc, rd);
+			float c = dot3(oc, oc) - neg.radius * neg.radius;
+			float disc = b * b - 4.0f * c;
+			if (disc >= 0.0f)
+			{
+				float tex = (-b + sqrt(disc)) * 0.5f;
+				float3 ep = ro + rd * tex;
+				GpuObj host = objs[*oid];
+				float3 hd = ep - V3(host.pos);
+				if (host.type == 1 && dot3(hd, hd) < host.radius * host.radius)
+				{
+					*tmin = tex;
+					*n = norm3(V3(neg.pos) - ep);
+					return (1);
+				}
+			}
+			return (0);
+		}
+	}
 	return (hit);
 }
 
@@ -531,7 +621,7 @@ static float3	gpu_shadow_atten(float3 p, float3 ldir, float ldist,
 
 	for (int i = 0; i < nobj; i++)
 	{
-		if (i == self_id)
+		if (i == self_id || objs[i].is_neg)
 			continue ;
 		GpuObj o = objs[i];
 		float t = 1e30f;
@@ -553,7 +643,9 @@ static float3	gpu_shadow_atten(float3 p, float3 ldir, float ldist,
 			h = hit_disk(ro, ldir, o, &t, &nn);
 		else if (o.type == 8)
 			h = hit_paraboloid(ro, ldir, o, &t, &nn);
-		if (!h || t >= ldist)
+		else if (o.type == 9)
+			h = hit_torus(ro, ldir, o, &t, &nn);
+		if (!h || t >= ldist || gpu_point_in_neg(ro + ldir * t, objs, nobj) >= 0)
 			continue ;
 		if (o.transp <= 0.0f)
 			return ((float3)(0.0f, 0.0f, 0.0f));
@@ -565,7 +657,7 @@ static float3	gpu_shadow_atten(float3 p, float3 ldir, float ldist,
 static float3	shade_direct(float3 p, float3 n, float3 rd, float3 col,
 		float shininess, float reflectivity, int oid,
 		__global const GpuObj *objs, int nobj,
-		__global const GpuLight *lights, int nlight, float3 ambient)
+		__global const GpuLight *lights, int nlight, float3 ambient, uint *seed)
 {
 	float3	lit = ambient;
 
@@ -581,7 +673,15 @@ static float3	shade_direct(float3 p, float3 n, float3 rd, float3 col,
 		}
 		else
 		{
-			ldir = V3(lights[li].pos) - p;
+			float3 lpos = V3(lights[li].pos);
+			if (lights[li].radius > 0.0f)
+			{
+				float3 jv = (float3)(rand_u(seed) * 2.0f - 1.0f,
+						rand_u(seed) * 2.0f - 1.0f,
+						rand_u(seed) * 2.0f - 1.0f);
+				lpos += norm3(jv) * (lights[li].radius * rand_u(seed));
+			}
+			ldir = lpos - p;
 			ldist = sqrt(dot3(ldir, ldir));
 			ldir = ldir / fmax(ldist, 1e-6f);
 		}
@@ -607,30 +707,12 @@ static float3	shade_direct(float3 p, float3 n, float3 rd, float3 col,
 	return (lit);
 }
 
-__kernel void	trace_frame(__global float *out,
-		__global const GpuCam *cam,
-		__global const GpuObj *objs,
-		int nobj,
-		__global const GpuLight *lights,
-		int nlight,
-		float3 ambient,
-		int width,
-		int height,
-		int y_start,
-		int y_count,
-		int frame)
+static float3	trace_one_ray(float3 ro, float3 rd, __global const GpuObj *objs,
+		int nobj, __global const GpuLight *lights, int nlight,
+		float3 ambient, uint *seed)
 {
-	int		id;
-	int		x;
-	int		ly;
-	int		y;
-	uint	seed;
-	float	xoff;
-	float	yoff;
-	float	nx;
-	float	ny;
-	float3	ro;
-	float3	rd;
+	float3	rgb = (float3)(0.0f, 0.0f, 0.0f);
+	float3	wmask = (float3)(1.0f, 1.0f, 1.0f);
 	float	tmin;
 	float3	n;
 	float3	col;
@@ -640,24 +722,7 @@ __kernel void	trace_frame(__global float *out,
 	float	transp;
 	float	ior;
 	int		oid;
-	float3	rgb;
-	float3	wmask;
 
-	id = (int)get_global_id(0);
-	if (id >= width * y_count)
-		return ;
-	x = id % width;
-	ly = id / width;
-	y = y_start + ly;
-	seed = (uint)(y * width + x) ^ ((uint)frame * 2654435761u);
-	xoff = rand_u(&seed) - 0.5f;
-	yoff = rand_u(&seed) - 0.5f;
-	nx = (((float)x + xoff) * (2.0f / (float)width)) - 1.0f;
-	ny = (((float)y + yoff) * (2.0f / (float)height)) - 1.0f;
-	ro = V3(cam->origin);
-	rd = norm3(V3(cam->center) + V3(cam->u) * nx + V3(cam->v) * ny - ro);
-	rgb = (float3)(0.0f, 0.0f, 0.0f);
-	wmask = (float3)(1.0f, 1.0f, 1.0f);
 	for (int bounce = 0; bounce <= 5; bounce++)
 	{
 		if (wmask.x + wmask.y + wmask.z < 1e-3f)
@@ -667,7 +732,7 @@ __kernel void	trace_frame(__global float *out,
 			break ;
 		float3 p = ro + rd * tmin;
 		float3 lit = shade_direct(p, n, rd, col, shininess, reflectivity, oid,
-				objs, nobj, lights, nlight, ambient);
+				objs, nobj, lights, nlight, ambient, seed);
 		if ((mirror <= 0.0f && transp <= 0.0f) || bounce == 5)
 		{
 			rgb += lit * wmask;
@@ -690,7 +755,8 @@ __kernel void	trace_frame(__global float *out,
 						&rsh, &rrf, &rmr, &rtr, &rior, &roid))
 				{
 					float3 rlit = shade_direct(rorg + rdir * rt, rn, rdir, rc,
-							rsh, rrf, roid, objs, nobj, lights, nlight, ambient);
+							rsh, rrf, roid, objs, nobj, lights, nlight,
+							ambient, seed);
 					rgb += rlit * (wmask * mirror);
 				}
 			}
@@ -719,6 +785,91 @@ __kernel void	trace_frame(__global float *out,
 			ro = p + nn * 1e-3f;
 			rd = norm3(rd - nn * (2.0f * dot3(rd, nn)));
 		}
+	}
+	return (rgb);
+}
+
+static void	make_eye_ray(__global const GpuCam *cam, float nx, float ny,
+		float eye_sign, float3 *ro, float3 *rd)
+{
+	float3	orig = V3(cam->origin);
+	float3	base_d = norm3(V3(cam->center) + V3(cam->u) * nx
+			+ V3(cam->v) * ny - orig);
+	float3	focal = orig + base_d * 8.0f;
+
+	*ro = orig + V3(cam->cam_u) * (eye_sign * 0.18f);
+	*rd = norm3(focal - *ro);
+}
+
+__kernel void	trace_frame(__global float *out,
+		__global const GpuCam *cam,
+		__global const GpuObj *objs,
+		int nobj,
+		__global const GpuLight *lights,
+		int nlight,
+		float3 ambient,
+		int width,
+		int height,
+		int y_start,
+		int y_count,
+		int frame)
+{
+	int		id;
+	int		x;
+	int		ly;
+	int		y;
+	uint	seed;
+	float	xoff;
+	float	yoff;
+	float	nx;
+	float	ny;
+	float3	ro;
+	float3	rd;
+	float3	rgb;
+
+	id = (int)get_global_id(0);
+	if (id >= width * y_count)
+		return ;
+	x = id % width;
+	ly = id / width;
+	y = y_start + ly;
+	seed = (uint)(y * width + x) ^ ((uint)frame * 2654435761u);
+	xoff = rand_u(&seed) - 0.5f;
+	yoff = rand_u(&seed) - 0.5f;
+	nx = (((float)x + xoff) * (2.0f / (float)width)) - 1.0f;
+	ny = (((float)y + yoff) * (2.0f / (float)height)) - 1.0f;
+	int		passes = (cam->stereo_mode == 1) ? 2 : 1;
+	rgb = (float3)(0.0f, 0.0f, 0.0f);
+	for (int pass = 0; pass < passes; pass++)
+	{
+		if (cam->stereo_mode == 1)
+			make_eye_ray(cam, nx, ny, (pass == 0) ? -1.0f : 1.0f, &ro, &rd);
+		else if (cam->stereo_mode == 2)
+		{
+			int halfw = width / 2;
+			float eye = (x < halfw) ? -1.0f : 1.0f;
+			float lx = (x < halfw) ? ((float)x + xoff) : ((float)(x - halfw) + xoff);
+			float snx = (lx * (2.0f / (float)halfw)) - 1.0f;
+			make_eye_ray(cam, snx, ny, eye, &ro, &rd);
+		}
+		else
+		{
+			ro = V3(cam->origin);
+			rd = norm3(V3(cam->center) + V3(cam->u) * nx + V3(cam->v) * ny - ro);
+		}
+		float3 c = trace_one_ray(ro, rd, objs, nobj, lights, nlight, ambient, &seed);
+		if (cam->stereo_mode == 1)
+		{
+			if (pass == 0)
+				rgb.x = c.x;
+			else
+			{
+				rgb.y = c.y;
+				rgb.z = c.z;
+			}
+		}
+		else
+			rgb = c;
 	}
 	out[id * 3 + 0] = rgb.x;
 	out[id * 3 + 1] = rgb.y;

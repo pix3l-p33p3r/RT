@@ -24,6 +24,10 @@ int	check_extra_shapes(t_vars *var, char *line, int i)
 		return (check_disk(var, line, i), 1);
 	if (ft_strncmp(line, "pb ", 3) == 0)
 		return (check_paraboloid(var, line, i), 1);
+	if (ft_strncmp(line, "to ", 3) == 0)
+		return (check_torus(var, line, i), 1);
+	if (ft_strncmp(line, "ns ", 3) == 0)
+		return (check_neg_sphere(var, line, i), 1);
 	return (0);
 }
 

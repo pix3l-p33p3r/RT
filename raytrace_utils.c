@@ -35,8 +35,7 @@ void	process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng)
 	norm->yoff = random_float(rng, -0.5, 0.5);
 	norm->normx = (norm->xfact * (float)(norm->x + norm->xoff)) - 1.0;
 	norm->normy = (norm->yfact * (float)(norm->y + norm->yoff)) - 1.0;
-	norm->ray = generate_ray(norm->normx, norm->normy, &vars->camera);
-	norm->color = trace_ray(vars, &norm->ray, MAX_BOUNCES);
+	norm->color = trace_stereo_pixel(vars, norm);
 	vars->buffer_img[norm->y * WIDTH + norm->x]
 		= add_vec(vars->buffer_img[norm->y * WIDTH + norm->x], norm->color);
 	norm->color = scale_vec(vars->buffer_img[
