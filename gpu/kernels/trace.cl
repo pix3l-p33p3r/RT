@@ -12,6 +12,8 @@ typedef struct {
 	float	shininess;
 	float	reflectivity;
 	float	mirror;
+	float	transp;
+	float	ior;
 } GpuObj;
 
 typedef struct {
@@ -264,9 +266,17 @@ static int	hit_cone(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
 	return (1);
 }
 
+static float3	glass_tint3(float3 base_c)
+{
+	return ((float3)(0.35f + 0.65f * base_c.x,
+			0.35f + 0.65f * base_c.y,
+			0.35f + 0.65f * base_c.z));
+}
+
 static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 		int nobj, float *tmin, float3 *n, float3 *col,
-		float *shininess, float *reflectivity, float *mirror, int *oid)
+		float *shininess, float *reflectivity, float *mirror,
+		float *transp, float *ior, int *oid)
 {
 	int		i;
 	float	t;
@@ -276,6 +286,8 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 	*tmin = 1e30f;
 	*oid = -1;
 	*mirror = 0.0f;
+	*transp = 0.0f;
+	*ior = 1.0f;
 	hit = 0;
 	for (i = 0; i < nobj; i++)
 	{
@@ -299,11 +311,80 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 			*shininess = o.shininess;
 			*reflectivity = o.reflectivity;
 			*mirror = o.mirror;
+			*transp = o.transp;
+			*ior = o.ior;
 			*oid = i;
 			hit = 1;
 		}
 	}
 	return (hit);
+}
+
+static float3	gpu_shadow_atten(float3 p, float3 ldir, float ldist,
+		__global const GpuObj *objs, int nobj, int self_id)
+{
+	float3	atten = (float3)(1.0f, 1.0f, 1.0f);
+	float3	ro = p + ldir * 1e-3f;
+
+	for (int i = 0; i < nobj; i++)
+	{
+		if (i == self_id)
+			continue ;
+		GpuObj o = objs[i];
+		float t = 1e30f;
+		float3 nn;
+		int h = 0;
+		if (o.type == 1)
+			h = hit_sphere(ro, ldir, o, &t, &nn);
+		else if (o.type == 2)
+			h = hit_plane(ro, ldir, o, &t, &nn);
+		else if (o.type == 3)
+			h = hit_cylinder(ro, ldir, o, &t, &nn);
+		else if (o.type == 4)
+			h = hit_cone(ro, ldir, o, &t, &nn);
+		if (!h || t >= ldist)
+			continue ;
+		if (o.transp <= 0.0f)
+			return ((float3)(0.0f, 0.0f, 0.0f));
+		atten *= glass_tint3(V3(o.color)) * o.transp;
+	}
+	return (atten);
+}
+
+static float3	shade_direct(float3 p, float3 n, float3 rd, float3 col,
+		float shininess, float reflectivity, int oid,
+		__global const GpuObj *objs, int nobj,
+		__global const GpuLight *lights, int nlight, float3 ambient)
+{
+	float3	lit = ambient;
+
+	for (int li = 0; li < nlight; li++)
+	{
+		float3 lpos = V3(lights[li].pos);
+		float3 lcol = V3(lights[li].color);
+		float3 ldir = lpos - p;
+		float ldist = sqrt(dot3(ldir, ldir));
+		ldir = ldir / fmax(ldist, 1e-6f);
+		float3 atten = gpu_shadow_atten(p, ldir, ldist, objs, nobj, oid);
+		if (atten.x <= 0.0f && atten.y <= 0.0f && atten.z <= 0.0f)
+			continue ;
+		float ndl = fmax(dot3(n, ldir), 0.0f);
+		float diff = ndl * lights[li].intensity;
+		if (diff > 0.0f)
+			lit += col * lcol * atten * diff;
+		if (shininess > 0.0f)
+		{
+			float3 r = ldir - n * (2.0f * dot3(ldir, n));
+			float prod = dot3(norm3(r), rd);
+			if (prod > 0.0f)
+			{
+				float spec = reflectivity * pow(prod, shininess)
+					* lights[li].intensity;
+				lit += lcol * atten * spec;
+			}
+		}
+	}
+	return (lit);
 }
 
 __kernel void	trace_frame(__global float *out,
@@ -336,9 +417,11 @@ __kernel void	trace_frame(__global float *out,
 	float	shininess;
 	float	reflectivity;
 	float	mirror;
+	float	transp;
+	float	ior;
 	int		oid;
 	float3	rgb;
-	float	weight;
+	float3	wmask;
 
 	id = (int)get_global_id(0);
 	if (id >= width * y_count)
@@ -354,55 +437,68 @@ __kernel void	trace_frame(__global float *out,
 	ro = V3(cam->origin);
 	rd = norm3(V3(cam->center) + V3(cam->u) * nx + V3(cam->v) * ny - ro);
 	rgb = (float3)(0.0f, 0.0f, 0.0f);
-	weight = 1.0f;
-	for (int bounce = 0; bounce <= 5 && weight > 1e-3f; bounce++)
+	wmask = (float3)(1.0f, 1.0f, 1.0f);
+	for (int bounce = 0; bounce <= 5; bounce++)
 	{
+		if (wmask.x + wmask.y + wmask.z < 1e-3f)
+			break ;
 		if (!intersect(ro, rd, objs, nobj, &tmin, &n, &col,
-				&shininess, &reflectivity, &mirror, &oid))
+				&shininess, &reflectivity, &mirror, &transp, &ior, &oid))
 			break ;
 		float3 p = ro + rd * tmin;
-		float3 lit = ambient;
-		for (int li = 0; li < nlight; li++)
+		float3 lit = shade_direct(p, n, rd, col, shininess, reflectivity, oid,
+				objs, nobj, lights, nlight, ambient);
+		if ((mirror <= 0.0f && transp <= 0.0f) || bounce == 5)
 		{
-			float3 lpos = V3(lights[li].pos);
-			float3 lcol = V3(lights[li].color);
-			float3 ldir = lpos - p;
-			float ldist = sqrt(dot3(ldir, ldir));
-			ldir = ldir / fmax(ldist, 1e-6f);
-			float t2;
-			float3 n2, c2;
-			float sh2, rf2, mr2;
-			int oid2;
-			int blocked = intersect(p + ldir * 1e-3f, ldir, objs, nobj,
-					&t2, &n2, &c2, &sh2, &rf2, &mr2, &oid2) && (t2 < ldist);
-			if (!blocked)
-			{
-				float ndl = fmax(dot3(n, ldir), 0.0f);
-				float diff = ndl * lights[li].intensity;
-				if (diff > 0.0f)
-					lit += col * lcol * diff;
-				if (shininess > 0.0f)
-				{
-					float3 r = ldir - n * (2.0f * dot3(ldir, n));
-					float prod = dot3(norm3(r), rd);
-					if (prod > 0.0f)
-					{
-						float spec = reflectivity * pow(prod, shininess)
-							* lights[li].intensity;
-						lit += lcol * spec;
-					}
-				}
-			}
-		}
-		if (mirror <= 0.0f || bounce == 5)
-		{
-			rgb += lit * weight;
+			rgb += lit * wmask;
 			break ;
 		}
-		rgb += lit * (weight * (1.0f - mirror));
-		weight *= mirror;
-		ro = p + n * 1e-3f;
-		rd = norm3(rd - n * (2.0f * dot3(rd, n)));
+		float opaque = fmax(0.0f, 1.0f - mirror - transp);
+		rgb += lit * (wmask * opaque);
+		float3 nn = (dot3(rd, n) > 0.0f) ? -n : n;
+		if (transp > 0.0f)
+		{
+			if (mirror > 0.0f)
+			{
+				float3 rdir = norm3(rd - nn * (2.0f * dot3(rd, nn)));
+				float3 rorg = p + nn * 1e-3f;
+				float rt;
+				float3 rn, rc;
+				float rsh, rrf, rmr, rtr, rior;
+				int roid;
+				if (intersect(rorg, rdir, objs, nobj, &rt, &rn, &rc,
+						&rsh, &rrf, &rmr, &rtr, &rior, &roid))
+				{
+					float3 rlit = shade_direct(rorg + rdir * rt, rn, rdir, rc,
+							rsh, rrf, roid, objs, nobj, lights, nlight, ambient);
+					rgb += rlit * (wmask * mirror);
+				}
+			}
+			float cosi = dot3(rd, n);
+			float eta = 1.0f / fmax(ior, 1.0f);
+			if (cosi < 0.0f)
+				cosi = -cosi;
+			else
+				eta = fmax(ior, 1.0f);
+			float kt = 1.0f - eta * eta * (1.0f - cosi * cosi);
+			wmask *= glass_tint3(col) * transp;
+			if (kt < 0.0f)
+			{
+				ro = p + nn * 1e-3f;
+				rd = norm3(rd - nn * (2.0f * dot3(rd, nn)));
+			}
+			else
+			{
+				ro = p - nn * 1e-3f;
+				rd = norm3(rd * eta + nn * (eta * cosi - sqrt(kt)));
+			}
+		}
+		else
+		{
+			wmask *= mirror;
+			ro = p + nn * 1e-3f;
+			rd = norm3(rd - nn * (2.0f * dot3(rd, nn)));
+		}
 	}
 	out[id * 3 + 0] = rgb.x;
 	out[id * 3 + 1] = rgb.y;

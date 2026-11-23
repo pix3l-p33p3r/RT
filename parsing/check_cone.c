@@ -14,11 +14,26 @@
 
 void	parse_optional_mat(t_object *obj, char *line, int *i)
 {
+	obj->ior = 1.0f;
 	*i = skip_space(line, *i);
 	if (line[*i])
 	{
 		obj->mirror = parse_number(line, i);
 		check_numbers(obj->mirror, 0.0f, 1.0f);
+	}
+	*i = skip_space(line, *i);
+	if (line[*i])
+	{
+		obj->transp = parse_number(line, i);
+		check_numbers(obj->transp, 0.0f, 1.0f);
+		if (obj->transp > 0.0f)
+			obj->ior = 1.5f;
+	}
+	*i = skip_space(line, *i);
+	if (line[*i])
+	{
+		obj->ior = parse_number(line, i);
+		check_numbers(obj->ior, 1.0f, 3.0f);
 	}
 	if (line[*i])
 		unexpected_error(line, *i);

@@ -1,0 +1,19 @@
+# Glass refraction + tinted transparent shadows demo
+# Trailing material fields: [mirror [transp [ior]]]
+A 0.18 255,255,255
+C 0,-12,3.5 0,0.28,-0.2 48
+L 4,-6,9 1.0 255,255,255
+L -6,-5,6 0.65 220,235,255
+
+# Light floor + back wall to show tinted glass shadows & refraction bend
+pl 0,0,0 0,0,1 180,185,195 0.15
+pl 0,7,0 0,-1,0 130,140,165 0.05
+
+# Clear crystal glass sphere (front center) + colored emerald glass sphere (right)
+sp 0,-1.5,1.5 2.4 235,245,255 0.12 0.85 1.5
+sp 3.0,-0.5,1.3 2.1 50,235,140 0.10 0.82 1.45
+
+# Opaque objects behind the glass to see refracted distortion!
+sp -2.4,2.5,1.4 2.2 230,55,55 0.1
+cy 0.2,3.0,0 0,0,1 1.3 3.2 245,180,35 0.2
+cn -3.8,-0.5,0 0,0,1 1.8 2.6 80,120,245 0.4

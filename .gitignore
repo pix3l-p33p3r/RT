@@ -6,6 +6,7 @@ miniRT
 miniRTbonus
 tests/test_cone_quad
 tests/test_reflect
+tests/test_refract
 
 # editor / OS
 .DS_Store

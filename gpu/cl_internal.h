@@ -30,6 +30,8 @@ typedef struct s_gpu_obj
 	float	shininess;
 	float	reflectivity;
 	float	mirror;
+	float	transp;
+	float	ior;
 }	t_gpu_obj;
 
 typedef struct s_gpu_light

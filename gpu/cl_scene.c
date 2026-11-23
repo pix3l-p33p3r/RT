@@ -49,6 +49,10 @@ static void	pack_obj(t_gpu_obj *o, t_object *e)
 		o->shininess = e->shininess;
 	o->reflectivity = e->reflectivity;
 	o->mirror = e->mirror;
+	o->transp = e->transp;
+	o->ior = e->ior;
+	if (o->ior < 1.0f)
+		o->ior = 1.0f;
 	if (e->type == SPHERE)
 		o->radius = e->scale.x;
 }

@@ -111,6 +111,8 @@ typedef struct s_object
 	float		reflectivity;
 	float		shininess;
 	float		mirror;
+	float		transp;
+	float		ior;
 	t_matrix	**gtfm;
 	int			(*hit)(t_ray *ray, struct s_info *info);
 }	t_object;
@@ -326,6 +328,10 @@ t_vector		diffuse(t_info *info, t_vars *vars);
 t_light			*init_lights(void);
 t_vector		compute_color(t_vars *vars, t_info *info, t_ray *camera_ray);
 t_vector		trace_ray(t_vars *vars, t_ray *ray, int depth);
+int				refract_vec(t_vector d, t_vector n, float ior, t_vector *out);
+t_ray			build_refract_ray(t_info *info, t_ray *in_ray);
+t_vector		glass_tint(t_vector base_color);
+t_vector		shadow_atten(t_light *light, t_object *objects, t_info *info);
 t_vector		specular_highlight(t_info *info, t_vars *vars,
 					t_ray *camera_ray);
 int				test_cylinder(t_ray *ray, t_info *info);

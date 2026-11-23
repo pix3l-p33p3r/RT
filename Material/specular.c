@@ -6,48 +6,33 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/17 23:18:20 by elel-yak          #+#    #+#             */
-/*   Updated: 2023/12/27 03:50:53 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:47:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../main.h"
 
-static int	cast_ray(t_object *objects, t_ray *ray)
+static void	add_light_spec(t_norm6 *norm, t_info *info,
+		t_vars *vars, t_ray *camera_ray)
 {
-	int		validint;
-	int		i;
-	t_info	test;
+	t_vector	atten;
+	t_light		*l;
 
-	i = -1;
-	validint = 0;
-	while (objects[++i].gtfm)
-	{
-		test.e = &objects[i];
-		validint = objects[i].hit(ray, &test);
-		if (validint)
-			break ;
-	}
-	return (validint);
-}
-
-static void	func1(t_norm6 *norm, t_info *info, t_vars *vars, t_ray *camera_ray)
-{
-	norm->intensity = 0;
-	norm->lighdir = normalized(sub_vec(
-				vars->lights[norm->i].position, info->hitpoint));
-	norm->start = add_vec(info->hitpoint, scale_vec(norm->lighdir, 0.001f));
-	norm->light_ray = new_ray(norm->start, add_vec(norm->start, norm->lighdir));
-	norm->validint = cast_ray(vars->objects, &norm->light_ray);
-	if (!norm->validint)
-	{
-		norm->r = reflect(normalized(
-					norm->light_ray.direction), info->normal);
-		norm->v = normalized(camera_ray->direction);
-		norm->prod = dot_product(norm->r, norm->v);
-		if (norm->prod > 0.0)
-			norm->intensity = info->e->reflectivity
-				* powf(norm->prod, info->e->shininess);
-	}
+	l = &vars->lights[norm->i];
+	atten = shadow_atten(l, vars->objects, info);
+	if (atten.x <= 0.0f && atten.y <= 0.0f && atten.z <= 0.0f)
+		return ;
+	norm->lighdir = normalized(sub_vec(l->position, info->hitpoint));
+	norm->r = reflect(norm->lighdir, info->normal);
+	norm->v = normalized(camera_ray->direction);
+	norm->prod = dot_product(norm->r, norm->v);
+	if (norm->prod <= 0.0f)
+		return ;
+	norm->intensity = info->e->reflectivity
+		* powf(norm->prod, info->e->shininess) * l->intensity;
+	norm->red += l->color.x * atten.x * norm->intensity;
+	norm->green += l->color.y * atten.y * norm->intensity;
+	norm->blue += l->color.z * atten.z * norm->intensity;
 }
 
 t_vector	specular_highlight(t_info *info, t_vars *vars, t_ray *camera_ray)
@@ -59,17 +44,8 @@ t_vector	specular_highlight(t_info *info, t_vars *vars, t_ray *camera_ray)
 	norm.green = 0;
 	norm.blue = 0;
 	while (++norm.i < vars->pos1)
-	{
-		func1(&norm, info, vars, camera_ray);
-		norm.red += vars->lights[norm.i].color.x
-			* norm.intensity * vars->lights[norm.i].intensity;
-		norm.green += vars->lights[norm.i].color.y * norm.intensity
-			* vars->lights[norm.i].intensity;
-		norm.blue += vars->lights[norm.i].color.z
-			* norm.intensity * vars->lights[norm.i].intensity;
-	}
-	norm.spc_color = new_vec(norm.red, norm.green, norm.blue);
-	return (norm.spc_color);
+		add_light_spec(&norm, info, vars, camera_ray);
+	return (new_vec(norm.red, norm.green, norm.blue));
 }
 
 t_vector	compute_color(t_vars *vars, t_info *info, t_ray *camera_ray)

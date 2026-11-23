@@ -6,60 +6,27 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/17 22:07:00 by elel-yak          #+#    #+#             */
-/*   Updated: 2023/12/27 03:51:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:47:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../main.h"
 
-static int	cast_ray(t_ray *ray, t_object *objects,
-	t_info *info, float lighdist)
+static void	add_light_diff(t_light *light, t_vars *vars,
+		t_info *info, t_norm5 *norm)
 {
-	t_norm3	norm;
+	t_vector	atten;
+	t_vector	lighdir;
+	float		ndl;
 
-	norm.i = -1;
-	norm.validint = 0;
-	while (objects[++norm.i].gtfm)
-	{
-		if (info->e == &objects[norm.i])
-			continue ;
-		norm.test.e = &objects[norm.i];
-		norm.validint = objects[norm.i].hit(ray, &norm.test);
-		if (norm.validint)
-		{
-			norm.dist = length(sub_vec(norm.test.hitpoint, ray->point1));
-			if (norm.dist > lighdist)
-				norm.validint = 0;
-			else
-				break ;
-		}
-	}
-	return (norm.validint);
-}
-
-int	compute_illumination(t_light *light, t_object *objects,
-	t_info *info, float *intensity)
-{
-	t_norm4	norm;
-
-	norm.i = 0;
-	norm.lighdir = normalized(sub_vec(light->position, info->hitpoint));
-	norm.lighdist = length(sub_vec(light->position, info->hitpoint));
-	norm.light_ray = new_ray(info->hitpoint,
-			add_vec(info->hitpoint, norm.lighdir));
-	norm.validint = cast_ray(&norm.light_ray, objects, info, norm.lighdist);
-	if (!norm.validint)
-	{
-		norm.illumination = 1;
-		*intensity = light->intensity * fmax(
-				dot_product(info->normal, norm.lighdir), 0);
-	}
-	else
-	{
-		norm.illumination = 0;
-		*intensity = 0;
-	}
-	return (norm.illumination);
+	atten = shadow_atten(light, vars->objects, info);
+	if (atten.x <= 0.0f && atten.y <= 0.0f && atten.z <= 0.0f)
+		return ;
+	lighdir = normalized(sub_vec(light->position, info->hitpoint));
+	ndl = fmaxf(dot_product(info->normal, lighdir), 0.0f) * light->intensity;
+	norm->red += light->color.x * atten.x * ndl;
+	norm->green += light->color.y * atten.y * ndl;
+	norm->blue += light->color.z * atten.z * ndl;
 }
 
 t_vector	diffuse(t_info *info, t_vars *vars)
@@ -70,18 +37,8 @@ t_vector	diffuse(t_info *info, t_vars *vars)
 	norm.red = 0;
 	norm.green = 0;
 	norm.blue = 0;
-	norm.intensity = 0;
 	while (++norm.i < vars->pos1)
-	{
-		norm.valid_ilum = compute_illumination
-			(&vars->lights[norm.i], vars->objects, info, &norm.intensity);
-		if (norm.valid_ilum)
-		{
-			norm.red += vars->lights[norm.i].color.x * norm.intensity;
-			norm.green += vars->lights[norm.i].color.y * norm.intensity;
-			norm.blue += vars->lights[norm.i].color.z * norm.intensity;
-		}
-	}
+		add_light_diff(&vars->lights[norm.i], vars, info, &norm);
 	norm.diff_color = new_vec(norm.red * info->e->base_color.x,
 			norm.green * info->e->base_color.y,
 			norm.blue * info->e->base_color.z);

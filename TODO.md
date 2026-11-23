@@ -64,8 +64,8 @@ Still to implement for a solid options pack:
 ### Materials / optics
 
 - [x] **Reflection** (true recursive mirror rays — CPU `trace_ray` + GPU 5-bounce loop, optional `mirror` `[0..1]`, `scenes/mirror_demo.rt`)
-- [ ] **Transparency** / refraction
-- [ ] Shadow modified by transparent objects
+- [x] **Transparency** / refraction (Snell's law + TIR + inside-sphere exit, optional `transp ior`, `scenes/glass_demo.rt`)
+- [x] **Shadow modification according to transparency** (tinted glass shadows on CPU + dual-GPU)
 - [ ] Limit reflection / transparency / disruption by texture
 
 ### Surfaces
@@ -102,7 +102,7 @@ Eval sheet bonus slots for “outstanding” extras. Treat as: **depth + polish 
 Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
 1. [x] Perfect mandatory + 3 subject scenes  
-2. [ ] Reflection + transparency + transparent shadows  
+2. [x] Reflection + transparency + transparent shadows  
 3. [ ] Textures + bump  
 4. [ ] ≥3 extra shapes (disk, torus, cube/pyramid, …)  
 5. [ ] Parallel light + negative/CSG or composed solids  
@@ -129,8 +129,8 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 4. [x] **pthread row workers**  
 5. [x] **OpenCL GPU path** (enable with `RT_USE_GPU=1` + ICD)  
 6. [x] Recursive reflection (`scenes/mirror_demo.rt`)  
-7. [ ] Transparency + shadow through glass ← next  
-8. [ ] Textures + bump  
+7. [x] Transparency + refraction + glass shadows (`scenes/glass_demo.rt`)  
+8. [ ] Textures + bump ← next  
 9. [ ] Extra shapes + parallel light  
 10. [ ] Bonus polish until 125 demos feel undeniable  
 
