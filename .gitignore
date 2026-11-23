@@ -2,6 +2,7 @@
 *.o
 *.a
 rt
+rt_ocl
 miniRT
 miniRTbonus
 tests/test_cone_quad

@@ -4,9 +4,11 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 exec "$HOME/.local/bin/nix-enter" bash -lc "
   cd $(printf '%q' "$DIR")
   exec nix develop --command bash -lc '
-    if [ ! -x ./rt ] || ! ldd ./rt 2>/dev/null | grep -q /nix/store/.*ocl-icd; then
-      make re >/dev/null
+    if [ ! -x ./rt_ocl ]; then
+      make fclean >/dev/null
+      make >/dev/null
+      mv -f rt rt_ocl
     fi
-    exec env RT_USE_GPU=1 ./rt \"\$@\"
+    exec env RT_USE_GPU=1 ./rt_ocl \"\$@\"
   ' -- $(printf '%q ' "$@")
 "
