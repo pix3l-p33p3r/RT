@@ -370,8 +370,7 @@ __kernel void	trace_frame(__global float *out,
 			if (!blocked)
 			{
 				float ndl = fmax(dot3(n, ldir), 0.0f);
-				float diff = (1.0f - (acos(clamp(ndl, -1.0f, 1.0f))
-						/ 1.5707963f)) * lights[li].intensity;
+				float diff = ndl * lights[li].intensity;
 				if (diff > 0.0f)
 					rgb += col * lcol * diff;
 				if (shininess > 0.0f)

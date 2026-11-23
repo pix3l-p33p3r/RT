@@ -9,7 +9,7 @@ Legend: `[x]` already in mini-RT base · `[ ]` still to build · `[~]` partial /
 
 ## 0. Unlock rule (do this first)
 
-- [ ] Mandatory 100% green (no crashes, no leaks, live demos work)
+- [x] Mandatory 100% green (no crashes, no leaks, live demos work)
 - [ ] Enough options ready to **show live** (PNG/JPEG alone do **not** count)
 - [ ] Own scene tools: `.rt` files and/or in-app edits (no public third-party scene tools for defence)
 
@@ -34,7 +34,7 @@ Legend: `[x]` already in mini-RT base · `[ ]` still to build · `[~]` partial /
 | Multi-spot | [x] | light array + bonus RGB lights |
 | Shine effect | [x] | Phong specular (not mirror) |
 | Executable named `rt` | [x] | |
-| No memory leaks | [~] | re-check on RT (Valgrind) |
+| No memory leaks | [x] | Valgrind verified: `0 bytes in 0 blocks`, `0 errors` on clean exit |
 
 ### Mandatory demo scenes (subject strongly advises)
 
@@ -101,7 +101,7 @@ Eval sheet bonus slots for “outstanding” extras. Treat as: **depth + polish 
 
 Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
-1. [ ] Perfect mandatory + 3 subject scenes  
+1. [x] Perfect mandatory + 3 subject scenes  
 2. [ ] Reflection + transparency + transparent shadows  
 3. [ ] Textures + bump  
 4. [ ] ≥3 extra shapes (disk, torus, cube/pyramid, …)  
@@ -125,7 +125,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
 1. [x] Cone + `cn` parsing + scene with 4 shapes  
 2. [x] Expose / buffer blit (no full re-trace)  
-3. [~] Scenes VI.1 / VI.2 / VI.3 added — Valgrind pass still open  
+3. [x] Scenes VI.1 / VI.2 / VI.3 + Valgrind pass (`0 bytes in 0 blocks`)  
 4. [x] **pthread row workers**  
 5. [x] **OpenCL GPU path** (enable with `RT_USE_GPU=1` + ICD)  
 6. [ ] Recursive reflection  
@@ -138,7 +138,7 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 
 ## Quick gap vs mini-RT (one glance)
 
-**Must build for mandatory unlock:** cone · expose redraw · 3 demo scenes · leak audit  
+**Mandatory unlock:** 100% green (cone · expose · VI.1–3 scenes · 0-byte Valgrind pass)  
 
 **Already have as options seed:** ambient · `.rt` files · multi-spot · shadows · shine · progressive frames  
 

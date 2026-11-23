@@ -414,72 +414,108 @@ static int	upload_scene_once(t_gpu *g, t_vars *vars)
 	return (1);
 }
 
+typedef struct s_gpu_job
+{
+	t_gpu		*g;
+	t_gpu_dev	*d;
+	t_vars		*vars;
+	float		amb[4];
+	int			ok;
+}	t_gpu_job;
+
+static void	*gpu_worker(void *p)
+{
+	t_gpu_job	*j;
+	t_gpu_dev	*d;
+	size_t		global;
+	size_t		bytes;
+	float		*dst;
+	int			w;
+	int			h;
+	int			pix;
+	int			end;
+	cl_int		err;
+
+	j = (t_gpu_job *)p;
+	d = j->d;
+	w = WIDTH;
+	h = HEIGHT;
+	global = (size_t)WIDTH * (size_t)d->y_count;
+	clSetKernelArg(d->kern, 0, sizeof(cl_mem), &d->b_out);
+	clSetKernelArg(d->kern, 1, sizeof(cl_mem), &d->b_cam);
+	clSetKernelArg(d->kern, 2, sizeof(cl_mem), &d->b_objs);
+	clSetKernelArg(d->kern, 3, sizeof(int), &j->g->nobj);
+	clSetKernelArg(d->kern, 4, sizeof(cl_mem), &d->b_lights);
+	clSetKernelArg(d->kern, 5, sizeof(int), &j->g->nlight);
+	clSetKernelArg(d->kern, 6, sizeof(cl_float3), j->amb);
+	clSetKernelArg(d->kern, 7, sizeof(int), &w);
+	clSetKernelArg(d->kern, 8, sizeof(int), &h);
+	clSetKernelArg(d->kern, 9, sizeof(int), &d->y_start);
+	clSetKernelArg(d->kern, 10, sizeof(int), &d->y_count);
+	clSetKernelArg(d->kern, 11, sizeof(int), &j->vars->frames);
+	err = clEnqueueNDRangeKernel(d->queue, d->kern, 1, NULL, &global,
+			NULL, 0, NULL, NULL);
+	if (err != CL_SUCCESS)
+		return (j->ok = 0, NULL);
+	bytes = sizeof(float) * WIDTH * d->y_count * 3;
+	dst = j->g->fb + ((size_t)d->y_start * WIDTH * 3);
+	err = clEnqueueReadBuffer(d->queue, d->b_out, CL_TRUE, 0,
+			bytes, dst, 0, NULL, NULL);
+	if (err != CL_SUCCESS)
+		return (j->ok = 0, NULL);
+	pix = d->y_start * WIDTH;
+	end = (d->y_start + d->y_count) * WIDTH;
+	while (pix < end)
+	{
+		t_vector	c;
+
+		c = new_vec(j->g->fb[pix * 3], j->g->fb[pix * 3 + 1],
+				j->g->fb[pix * 3 + 2]);
+		j->vars->buffer_img[pix] = add_vec(j->vars->buffer_img[pix], c);
+		c = scale_vec(j->vars->buffer_img[pix], 1.0f / j->vars->frames);
+		set_pixel(j->vars->image, pix % WIDTH, pix / WIDTH, c);
+		pix++;
+	}
+	j->ok = 1;
+	return (NULL);
+}
+
 int	gpu_raytrace(t_vars *vars)
 {
-	t_gpu	*g;
-	float	amb[4];
-	int		w;
-	int		h;
-	int		i;
-	cl_int	err;
+	t_gpu		*g;
+	pthread_t	tids[MAX_GPUS];
+	t_gpu_job	jobs[MAX_GPUS];
+	int			i;
+	int			all_ok;
 
 	g = (t_gpu *)vars->gpu;
 	if (!g || !g->ok || !upload_scene_once(g, vars))
 		return (0);
 	vars->frames++;
-	w = WIDTH;
-	h = HEIGHT;
-	amb[0] = vars->ambient ? vars->ambient->color.x : 0.0f;
-	amb[1] = vars->ambient ? vars->ambient->color.y : 0.0f;
-	amb[2] = vars->ambient ? vars->ambient->color.z : 0.0f;
-	amb[3] = 0.0f;
 	i = 0;
 	while (i < g->ndevs)
 	{
-		t_gpu_dev	*d = &g->devs[i];
-		size_t		global = (size_t)WIDTH * (size_t)d->y_count;
-
-		clSetKernelArg(d->kern, 0, sizeof(cl_mem), &d->b_out);
-		clSetKernelArg(d->kern, 1, sizeof(cl_mem), &d->b_cam);
-		clSetKernelArg(d->kern, 2, sizeof(cl_mem), &d->b_objs);
-		clSetKernelArg(d->kern, 3, sizeof(int), &g->nobj);
-		clSetKernelArg(d->kern, 4, sizeof(cl_mem), &d->b_lights);
-		clSetKernelArg(d->kern, 5, sizeof(int), &g->nlight);
-		clSetKernelArg(d->kern, 6, sizeof(cl_float3), amb);
-		clSetKernelArg(d->kern, 7, sizeof(int), &w);
-		clSetKernelArg(d->kern, 8, sizeof(int), &h);
-		clSetKernelArg(d->kern, 9, sizeof(int), &d->y_start);
-		clSetKernelArg(d->kern, 10, sizeof(int), &d->y_count);
-		clSetKernelArg(d->kern, 11, sizeof(int), &vars->frames);
-		err = clEnqueueNDRangeKernel(d->queue, d->kern, 1, NULL, &global,
-				NULL, 0, NULL, NULL);
-		if (err != CL_SUCCESS)
-			return (0);
-		clFlush(d->queue);
+		jobs[i].g = g;
+		jobs[i].d = &g->devs[i];
+		jobs[i].vars = vars;
+		jobs[i].amb[0] = vars->ambient ? vars->ambient->color.x : 0.0f;
+		jobs[i].amb[1] = vars->ambient ? vars->ambient->color.y : 0.0f;
+		jobs[i].amb[2] = vars->ambient ? vars->ambient->color.z : 0.0f;
+		jobs[i].amb[3] = 0.0f;
+		jobs[i].ok = 0;
+		if (pthread_create(&tids[i], NULL, gpu_worker, &jobs[i]) != 0)
+			tids[i] = 0;
 		i++;
 	}
+	all_ok = 1;
 	i = 0;
 	while (i < g->ndevs)
 	{
-		t_gpu_dev	*d = &g->devs[i];
-		size_t		bytes = sizeof(float) * WIDTH * d->y_count * 3;
-		float		*dst = g->fb + ((size_t)d->y_start * WIDTH * 3);
-
-		err = clEnqueueReadBuffer(d->queue, d->b_out, CL_TRUE, 0,
-				bytes, dst, 0, NULL, NULL);
-		if (err != CL_SUCCESS)
-			return (0);
+		if (tids[i])
+			pthread_join(tids[i], NULL);
+		if (!jobs[i].ok)
+			all_ok = 0;
 		i++;
 	}
-	i = -1;
-	while (++i < WIDTH * HEIGHT)
-	{
-		t_vector	c;
-
-		c = new_vec(g->fb[i * 3], g->fb[i * 3 + 1], g->fb[i * 3 + 2]);
-		vars->buffer_img[i] = add_vec(vars->buffer_img[i], c);
-		c = scale_vec(vars->buffer_img[i], 1.0f / vars->frames);
-		set_pixel(vars->image, i % WIDTH, i / WIDTH, c);
-	}
-	return (1);
+	return (all_ok);
 }

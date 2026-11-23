@@ -22,10 +22,7 @@ static int	cast_ray(t_ray *ray, t_object *objects,
 	while (objects[++norm.i].gtfm)
 	{
 		if (info->e == &objects[norm.i])
-		{
-			norm.i++ ;
-			continue ;
-		}
+		continue ;
 		norm.test.e = &objects[norm.i];
 		norm.validint = objects[norm.i].hit(ray, &norm.test);
 		if (norm.validint)

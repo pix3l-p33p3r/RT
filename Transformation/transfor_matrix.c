@@ -15,24 +15,23 @@
 t_vector	apply_transform_vector(t_vector *input,
 	t_matrix **gtfm, int dirflag)
 {
+	t_matrix	*m;
 	t_vector	output;
-	t_matrix	*tempdata;
-	t_matrix	*result;
-	float		*values;
 
-	tempdata = create_matrix(4, 1);
-	values = (float []){input->x, input->y, input->z, 1.0f};
-	fill_mt(tempdata, values);
+	if (!gtfm)
+		return (*input);
 	if (dirflag)
-		result = mt_multiplication(gtfm[0], tempdata);
+		m = gtfm[0];
 	else
-		result = mt_multiplication(gtfm[1], tempdata);
-	if (!result)
+		m = gtfm[1];
+	if (!m || !m->matrix)
 		return ((t_vector){0, 0, 0});
-	output = new_vec(result->matrix[0][0],
-			result->matrix[1][0], result->matrix[2][0]);
-	delete_matrix(result);
-	delete_matrix(tempdata);
+	output.x = m->matrix[0][0] * input->x + m->matrix[0][1] * input->y
+		+ m->matrix[0][2] * input->z + m->matrix[0][3];
+	output.y = m->matrix[1][0] * input->x + m->matrix[1][1] * input->y
+		+ m->matrix[1][2] * input->z + m->matrix[1][3];
+	output.z = m->matrix[2][0] * input->x + m->matrix[2][1] * input->y
+		+ m->matrix[2][2] * input->z + m->matrix[2][3];
 	return (output);
 }
 

@@ -6,7 +6,7 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/22 23:46:00 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/22 23:46:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 00:20:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,10 +33,18 @@ static void	*row_worker(void *p)
 	return (NULL);
 }
 
-static int	thread_count(void)
+int	rt_thread_count(void)
 {
+	char	*env;
 	long	n;
 
+	env = getenv("RT_THREADS");
+	if (env && *env)
+	{
+		n = atoi(env);
+		if (n >= 1 && n <= 64)
+			return ((int)n);
+	}
 	n = sysconf(_SC_NPROCESSORS_ONLN);
 	if (n < 1)
 		return (1);
@@ -58,7 +66,7 @@ void	threaded_raytrace(t_vars *vars)
 	vars->frames++;
 	xfact = 1.0f / ((float)WIDTH / 2.0f);
 	yfact = 1.0f / ((float)HEIGHT / 2.0f);
-	n = thread_count();
+	n = rt_thread_count();
 	chunk = (HEIGHT + n - 1) / n;
 	i = -1;
 	while (++i < n)

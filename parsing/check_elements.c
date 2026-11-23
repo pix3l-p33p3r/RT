@@ -52,7 +52,6 @@ void	check_ambient_lightning(t_vars *var, char *line, int i)
 	if (line[i])
 		unexpected_error(line, i);
 	ambient->color = scale_vec(ambient->color, 1.0f / 255.0f);
-	ambient->color = scale_vec(ambient->color, 1.0f / 255.0f);
 	ambient->color = scale_vec(ambient->color, ambient->ratio);
 	var->ambient = ambient;
 	free(line);

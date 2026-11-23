@@ -144,6 +144,7 @@ typedef struct s_vars
 	int				len;
 	int				pos1;
 	int				len1;
+	int				max_frames;
 	int				use_gpu;
 	int				gpu_ok;
 	void			*gpu;
@@ -240,8 +241,11 @@ void			initialize_raytrace(t_vars *vars, t_norm1 *norm);
 void			process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng);
 void			raytrace_rows(t_vars *vars, int y0, int y1, unsigned int rng,
 					float xfact, float yfact);
+int				rt_thread_count(void);
 void			threaded_raytrace(t_vars *vars);
 void			raytrace(t_vars *vars);
+void			cleanup_vars(t_vars *vars);
+int				close_hook(t_vars *vars);
 int				gpu_init(t_vars *vars);
 void			gpu_shutdown(t_vars *vars);
 int				gpu_raytrace(t_vars *vars);
