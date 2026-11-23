@@ -33,6 +33,7 @@ SRCS = 	./parsing/miniRT.c\
 	  	./parsing/get_next_line/get_next_line_utils.c\
 		./parsing/check_objects.c\
 		./parsing/check_cone.c\
+		./parsing/check_extra.c\
 		./parsing/myatoi.c\
 		vector.c \
 		vector1.c \
@@ -60,6 +61,8 @@ SRCS = 	./parsing/miniRT.c\
  		Objects/Cylinder_utils.c \
 		Objects/Cone.c \
 		Objects/Cone_utils.c \
+		Objects/Triangle.c \
+		Objects/HalfSphere.c \
 		Parallel/threads.c \
 		gpu/cl_init.c \
 		gpu/cl_setup.c \

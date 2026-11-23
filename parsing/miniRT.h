@@ -46,6 +46,8 @@ void		check_sphere(t_vars *var, char *line, int i);
 void		check_plane(t_vars *var, char *line, int i);
 void		check_cylinder(t_vars *var, char *line, int i);
 void		check_cone(t_vars *var, char *line, int i);
+void		check_triangle(t_vars *var, char *line, int i);
+void		check_half_sphere(t_vars *var, char *line, int i);
 void		parse_optional_mat(t_object *obj, char *line, int *i);
 void		check_all_scenes(t_vars *var, char *line, int i);
 void		ft_free(t_object **s);

@@ -44,7 +44,7 @@ int	refract_vec(t_vector d, t_vector n, float ior, t_vector *out)
 	return (1);
 }
 
-t_ray	build_refract_ray(t_info *info, t_ray *in_ray)
+t_ray	build_refract_ior(t_info *info, t_ray *in_ray, float ior)
 {
 	t_vector	dir;
 	t_vector	refr;
@@ -55,7 +55,7 @@ t_ray	build_refract_ray(t_info *info, t_ray *in_ray)
 	nn = info->normal;
 	if (dot_product(dir, nn) > 0.0f)
 		nn = scale_vec(nn, -1.0f);
-	if (!refract_vec(dir, info->normal, info->e->ior, &refr))
+	if (!refract_vec(dir, info->normal, ior, &refr))
 	{
 		refr = reflect(dir, nn);
 		orig = add_vec(info->hitpoint, scale_vec(nn, 0.001f));

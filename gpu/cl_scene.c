@@ -33,15 +33,10 @@ static void	pack_cam(t_gpu_cam *c, t_camera *cam)
 static void	pack_obj(t_gpu_obj *o, t_object *e)
 {
 	o->type = e->type;
-	o->pos[0] = e->translation.x;
-	o->pos[1] = e->translation.y;
-	o->pos[2] = e->translation.z;
-	o->axis[0] = e->d_normal.x;
-	o->axis[1] = e->d_normal.y;
-	o->axis[2] = e->d_normal.z;
-	o->color[0] = e->base_color.x;
-	o->color[1] = e->base_color.y;
-	o->color[2] = e->base_color.z;
+	ft_memcpy(o->pos, &e->translation, sizeof(float) * 3);
+	ft_memcpy(o->axis, &e->d_normal, sizeof(float) * 3);
+	ft_memcpy(o->v2, &e->scale, sizeof(float) * 3);
+	ft_memcpy(o->color, &e->base_color, sizeof(float) * 3);
 	o->radius = e->radius;
 	o->height = e->height;
 	o->shininess = 0.0f;
@@ -62,8 +57,8 @@ static void	pack_scene(t_gpu *g, t_vars *vars, t_gpu_scene *sc)
 	int	i;
 
 	g->nobj = vars->pos;
-	if (g->nobj > 128)
-		g->nobj = 128;
+	if (g->nobj > MAX_GPU_OBJS)
+		g->nobj = MAX_GPU_OBJS;
 	g->nlight = vars->pos1;
 	if (g->nlight > 32)
 		g->nlight = 32;

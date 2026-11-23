@@ -30,6 +30,10 @@ void	check_all_scenes(t_vars *var, char *line, int i)
 		check_cylinder(var, line, i);
 	else if (ft_strlen(line) > 2 && ft_strncmp(line, "cn ", 3) == 0)
 		check_cone(var, line, i);
+	else if (ft_strlen(line) > 2 && ft_strncmp(line, "tr ", 3) == 0)
+		check_triangle(var, line, i);
+	else if (ft_strlen(line) > 2 && ft_strncmp(line, "hs ", 3) == 0)
+		check_half_sphere(var, line, i);
 	else
 	{
 		printf("Error : unexpected behavior\n");

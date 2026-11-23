@@ -34,6 +34,8 @@ enum
 	PLANE = 2,
 	CYLINDER = 3,
 	CONE = 4,
+	TRIANGLE = 5,
+	HALF_SPHERE = 6,
 };
 
 typedef struct s_vector
@@ -329,13 +331,15 @@ t_light			*init_lights(void);
 t_vector		compute_color(t_vars *vars, t_info *info, t_ray *camera_ray);
 t_vector		trace_ray(t_vars *vars, t_ray *ray, int depth);
 int				refract_vec(t_vector d, t_vector n, float ior, t_vector *out);
-t_ray			build_refract_ray(t_info *info, t_ray *in_ray);
+t_ray			build_refract_ior(t_info *info, t_ray *in_ray, float ior);
 t_vector		glass_tint(t_vector base_color);
 t_vector		shadow_atten(t_light *light, t_object *objects, t_info *info);
 t_vector		specular_highlight(t_info *info, t_vars *vars,
 					t_ray *camera_ray);
 int				test_cylinder(t_ray *ray, t_info *info);
 int				test_cone(t_ray *ray, t_info *info);
+int				test_triangle(t_ray *ray, t_info *info);
+int				test_half_sphere(t_ray *ray, t_info *info);
 int				calculate_props(int min_index, t_vector *poi,
 					t_info *info, t_vector *vhat);
 int				cone_calculate_props(int min_index, t_vector *poi,

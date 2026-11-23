@@ -6,6 +6,7 @@ typedef struct {
 	int		type;
 	float	pos[3];
 	float	axis[3];
+	float	v2[3];
 	float	color[3];
 	float	radius;
 	float	height;
@@ -273,6 +274,64 @@ static float3	glass_tint3(float3 base_c)
 			0.35f + 0.65f * base_c.z));
 }
 
+static int	hit_triangle(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+{
+	float3	v0 = V3(o.pos);
+	float3	v1 = V3(o.axis);
+	float3	v2 = V3(o.v2);
+	float3	e1 = v1 - v0;
+	float3	e2 = v2 - v0;
+	float3	h = cross(rd, e2);
+	float	a = dot3(e1, h);
+	if (fabs(a) < 1e-6f)
+		return (0);
+	float	f = 1.0f / a;
+	float3	s = ro - v0;
+	float	u = f * dot3(s, h);
+	if (u < 0.0f || u > 1.0f)
+		return (0);
+	float3	q = cross(s, e1);
+	float	v = f * dot3(rd, q);
+	if (v < 0.0f || u + v > 1.0f)
+		return (0);
+	float	tt = f * dot3(e2, q);
+	if (tt < 1e-3f)
+		return (0);
+	*t = tt;
+	*n = norm3(cross(e1, e2));
+	if (dot3(*n, rd) > 0.0f)
+		*n = -*n;
+	return (1);
+}
+
+static int	hit_half_sphere(float3 ro, float3 rd, GpuObj o, float *t, float3 *n)
+{
+	float3	pos = V3(o.pos);
+	float3	axis = norm3(V3(o.axis));
+	float3	oc = ro - pos;
+	float	b = 2.0f * dot3(oc, rd);
+	float	c = dot3(oc, oc) - o.radius * o.radius;
+	float	disc = b * b - 4.0f * c;
+	if (disc < 0.0f)
+		return (0);
+	float	sd = sqrt(disc);
+	float	roots[2] = { (-b - sd) * 0.5f, (-b + sd) * 0.5f };
+	for (int k = 0; k < 2; k++)
+	{
+		if (roots[k] > 1e-3f)
+		{
+			float3 p = ro + rd * roots[k];
+			if (dot3(p - pos, axis) >= -1e-4f)
+			{
+				*t = roots[k];
+				*n = norm3(p - pos);
+				return (1);
+			}
+		}
+	}
+	return (0);
+}
+
 static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 		int nobj, float *tmin, float3 *n, float3 *col,
 		float *shininess, float *reflectivity, float *mirror,
@@ -300,6 +359,10 @@ static int	intersect(float3 ro, float3 rd, __global const GpuObj *objs,
 		else if (o.type == 3 && hit_cylinder(ro, rd, o, &t, &nn))
 			;
 		else if (o.type == 4 && hit_cone(ro, rd, o, &t, &nn))
+			;
+		else if (o.type == 5 && hit_triangle(ro, rd, o, &t, &nn))
+			;
+		else if (o.type == 6 && hit_half_sphere(ro, rd, o, &t, &nn))
 			;
 		else
 			continue ;
@@ -342,6 +405,10 @@ static float3	gpu_shadow_atten(float3 p, float3 ldir, float ldist,
 			h = hit_cylinder(ro, ldir, o, &t, &nn);
 		else if (o.type == 4)
 			h = hit_cone(ro, ldir, o, &t, &nn);
+		else if (o.type == 5)
+			h = hit_triangle(ro, ldir, o, &t, &nn);
+		else if (o.type == 6)
+			h = hit_half_sphere(ro, ldir, o, &t, &nn);
 		if (!h || t >= ldist)
 			continue ;
 		if (o.transp <= 0.0f)

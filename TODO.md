@@ -76,8 +76,9 @@ Still to implement for a solid options pack:
 
 ### Shapes
 
-- [ ] Limited objects: disk, parallelogram, half-sphere, tube, …
-- [ ] Composed elements: cube, pyramid, tetrahedron, …
+- [x] Limited objects: half-sphere (`hs` — `scenes/pokeball.rt`)
+- [x] Composed elements: triangles (`tr`), pyramids (`scenes/giza.rt`), 42 logo (`scenes/logo_42.rt`)
+- [x] Chromatic dispersion (RGB IOR split for `ior >= 1.7` — `scenes/prism_vortex.rt`)
 - [ ] Negative elements (CSG subtract)
 - [ ] More natives: paraboloid, hyperboloid, torus, …
 

@@ -6,7 +6,7 @@
 /*   By: elel-yak <elel-yak@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/23 00:35:00 by elel-yak          #+#    #+#             */
-/*   Updated: 2026/11/23 00:47:00 by elel-yak         ###   ########.fr       */
+/*   Updated: 2026/11/23 01:34:00 by elel-yak         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,28 @@ static t_vector	tint_mul(t_vector c, t_vector tint)
 	return (new_vec(c.x * tint.x, c.y * tint.y, c.z * tint.z));
 }
 
+static t_vector	trace_dispersed(t_vars *vars, t_info *info,
+		t_ray *ray, int depth)
+{
+	t_ray		r[3];
+	t_vector	cr;
+	t_vector	cg;
+	t_vector	cb;
+
+	if (info->e->ior < 1.7f || depth < MAX_BOUNCES)
+	{
+		r[0] = build_refract_ior(info, ray, info->e->ior);
+		return (trace_ray(vars, &r[0], depth - 1));
+	}
+	r[0] = build_refract_ior(info, ray, info->e->ior - 0.08f);
+	r[1] = build_refract_ior(info, ray, info->e->ior);
+	r[2] = build_refract_ior(info, ray, info->e->ior + 0.08f);
+	cr = trace_ray(vars, &r[0], depth - 1);
+	cg = trace_ray(vars, &r[1], depth - 1);
+	cb = trace_ray(vars, &r[2], depth - 1);
+	return (new_vec(cr.x, cg.y, cb.z));
+}
+
 static t_vector	add_secondary(t_vars *vars, t_info *info,
 		t_ray *ray, int depth)
 {
@@ -49,8 +71,7 @@ static t_vector	add_secondary(t_vars *vars, t_info *info,
 	}
 	if (info->e->transp > 0.0f)
 	{
-		sec = build_refract_ray(info, ray);
-		c = tint_mul(trace_ray(vars, &sec, depth - 1),
+		c = tint_mul(trace_dispersed(vars, info, ray, depth),
 				glass_tint(info->e->base_color));
 		out = add_vec(out, scale_vec(c, info->e->transp));
 	}

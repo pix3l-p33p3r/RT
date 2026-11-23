@@ -18,12 +18,14 @@
 # include <string.h>
 
 # define MAX_GPUS 8
+# define MAX_GPU_OBJS 256
 
 typedef struct s_gpu_obj
 {
 	int		type;
 	float	pos[3];
 	float	axis[3];
+	float	v2[3];
 	float	color[3];
 	float	radius;
 	float	height;
@@ -91,7 +93,7 @@ typedef struct s_gpu_job
 
 typedef struct s_gpu_scene
 {
-	t_gpu_obj	objs[128];
+	t_gpu_obj	objs[MAX_GPU_OBJS];
 	t_gpu_light	lights[32];
 	t_gpu_cam	cam;
 }	t_gpu_scene;
