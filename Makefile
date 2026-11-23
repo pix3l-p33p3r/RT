@@ -54,6 +54,7 @@ SRCS = 	./parsing/miniRT.c\
 		Material/material.c \
 		Material/Diffuse.c \
 		Material/specular.c \
+		Material/reflect.c \
 		Objects/Cylinder.c \
  		Objects/Cylinder_utils.c \
 		Objects/Cone.c \
@@ -81,10 +82,14 @@ test_cone:
 	$(CC) $(CFLAGS) -o tests/test_cone_quad tests/test_cone_quad.c -lm
 	./tests/test_cone_quad
 
+test_reflect:
+	$(CC) $(CFLAGS) -o tests/test_reflect tests/test_reflect.c -lm
+	./tests/test_reflect
+
 clean :
 	make clean -C ./libft
 	rm -rf $(OBJS)
-	rm -f tests/test_cone_quad
+	rm -f tests/test_cone_quad tests/test_reflect
 
 fclean : clean
 	make fclean -C ./libft
@@ -92,4 +97,4 @@ fclean : clean
 
 re : fclean all
 
-.PHONY : all clean fclean re test_cone
+.PHONY : all clean fclean re test_cone test_reflect

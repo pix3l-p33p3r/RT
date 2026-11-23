@@ -36,16 +36,12 @@ void	process_pixel(t_vars *vars, t_norm1 *norm, unsigned int *rng)
 	norm->normx = (norm->xfact * (float)(norm->x + norm->xoff)) - 1.0;
 	norm->normy = (norm->yfact * (float)(norm->y + norm->yoff)) - 1.0;
 	norm->ray = generate_ray(norm->normx, norm->normy, &vars->camera);
-	norm->intfound = test_intersection(&norm->ray, vars->objects, &norm->info);
-	if (norm->intfound)
-	{
-		norm->color = compute_color(vars, &norm->info, &norm->ray);
-		vars->buffer_img[norm->y * WIDTH + norm->x]
-			= add_vec(vars->buffer_img[norm->y * WIDTH + norm->x], norm->color);
-		norm->color = scale_vec(vars->buffer_img[
-				norm->y * WIDTH + norm->x], 1.0f / vars->frames);
-		set_pixel(vars->image, norm->x, norm->y, norm->color);
-	}
+	norm->color = trace_ray(vars, &norm->ray, MAX_BOUNCES);
+	vars->buffer_img[norm->y * WIDTH + norm->x]
+		= add_vec(vars->buffer_img[norm->y * WIDTH + norm->x], norm->color);
+	norm->color = scale_vec(vars->buffer_img[
+			norm->y * WIDTH + norm->x], 1.0f / vars->frames);
+	set_pixel(vars->image, norm->x, norm->y, norm->color);
 }
 
 void	raytrace_rows(t_thr_arg *arg)

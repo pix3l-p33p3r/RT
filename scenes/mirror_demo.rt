@@ -1,0 +1,15 @@
+# Mirror reflection showcase (optional trailing mirror [0..1])
+A 0.2 255,255,255
+C 0,-13,3.5 0,0.3,-0.2 48
+L 5,-7,8 0.95 255,255,255
+L -6,-5,6 0.7 210,230,255
+
+# Reflective floor + matte back wall
+pl 0,0,0 0,0,1 60,65,80 0.45
+pl 0,6,0 0,-1,0 35,40,60 0.2
+
+# Chrome mirror sphere, matte red sphere, reflective cylinder, gold cone
+sp 0,0,1.5 2.6 220,225,235 0.85
+sp -3.2,-1,1.1 2.0 220,45,45 0.05
+cy 3.2,0.5,0 0,0,1 1.4 3.0 60,150,235 0.5
+cn -1.5,2.5,0 0,0,1 2.0 2.6 240,185,40 0.3

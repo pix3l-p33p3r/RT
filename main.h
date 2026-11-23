@@ -24,6 +24,7 @@
 # define WIDTH 800
 # define HEIGHT 600
 # define EPSILON 0.0001f
+# define MAX_BOUNCES 5
 # define BACKWARD 0
 # define FORWARD 1
 
@@ -109,6 +110,7 @@ typedef struct s_object
 	int			has_material;
 	float		reflectivity;
 	float		shininess;
+	float		mirror;
 	t_matrix	**gtfm;
 	int			(*hit)(t_ray *ray, struct s_info *info);
 }	t_object;
@@ -323,6 +325,7 @@ int				test_plane(t_ray *ray, t_info *info);
 t_vector		diffuse(t_info *info, t_vars *vars);
 t_light			*init_lights(void);
 t_vector		compute_color(t_vars *vars, t_info *info, t_ray *camera_ray);
+t_vector		trace_ray(t_vars *vars, t_ray *ray, int depth);
 t_vector		specular_highlight(t_info *info, t_vars *vars,
 					t_ray *camera_ray);
 int				test_cylinder(t_ray *ray, t_info *info);

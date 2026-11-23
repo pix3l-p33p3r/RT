@@ -63,7 +63,7 @@ Still to implement for a solid options pack:
 
 ### Materials / optics
 
-- [ ] **Reflection** (true recursive mirror rays — not only Phong)
+- [x] **Reflection** (true recursive mirror rays — CPU `trace_ray` + GPU 5-bounce loop, optional `mirror` `[0..1]`, `scenes/mirror_demo.rt`)
 - [ ] **Transparency** / refraction
 - [ ] Shadow modified by transparent objects
 - [ ] Limit reflection / transparency / disruption by texture
@@ -128,8 +128,8 @@ Suggested 125 stack (pick and finish hard, don’t half-do 20):
 3. [x] Scenes VI.1 / VI.2 / VI.3 + Valgrind pass (`0 bytes in 0 blocks`)  
 4. [x] **pthread row workers**  
 5. [x] **OpenCL GPU path** (enable with `RT_USE_GPU=1` + ICD)  
-6. [ ] Recursive reflection  
-7. [ ] Transparency + shadow through glass  
+6. [x] Recursive reflection (`scenes/mirror_demo.rt`)  
+7. [ ] Transparency + shadow through glass ← next  
 8. [ ] Textures + bump  
 9. [ ] Extra shapes + parallel light  
 10. [ ] Bonus polish until 125 demos feel undeniable  

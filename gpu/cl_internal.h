@@ -29,6 +29,7 @@ typedef struct s_gpu_obj
 	float	height;
 	float	shininess;
 	float	reflectivity;
+	float	mirror;
 }	t_gpu_obj;
 
 typedef struct s_gpu_light

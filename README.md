@@ -40,7 +40,8 @@ Base: miniRT bonus (sphere / plane / cylinder, multi lights, shadows, specular, 
 
 - [x] Ambient light
 - [x] External scene files
-- [ ] Mirror reflection, transparency, textures, bump, more shapes, …
+- [x] Recursive mirror reflection (`scenes/mirror_demo.rt`, optional trailing `mirror` `[0..1]`)
+- [ ] Transparency, textures, bump, more shapes, …
 
 ## Branches
 
