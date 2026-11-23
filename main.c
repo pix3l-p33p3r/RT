@@ -17,8 +17,13 @@
 
 int	loop(t_vars *vars)
 {
+	char	*out;
+
 	if (vars->max_frames > 0 && vars->frames >= vars->max_frames)
 	{
+		out = getenv("RT_EXPORT_PATH");
+		if (out && *out)
+			export_ppm(vars, out);
 		if (getenv("RT_MAX_FRAMES"))
 			close_hook(vars);
 		return (0);
