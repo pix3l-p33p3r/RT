@@ -50,7 +50,9 @@ In-window keys (`controls.c`): `W/A/S/D` + `Q/E` move · Arrows yaw/pitch · `V`
 
 ## 3. Nix + Dual-GPU OpenCL Playbook (Linux 5.15 Cluster)
 
-- **Why `nixos-24.05` is pinned in `flake.nix`:** Unstable Mesa 26 `rusticl` requires kernel DRM `>= 3.59` (Linux 6.11+) and refuses to initialize AMD RX 6500 on 5.15 (`DRM 3.42`). Pinning `pkgs2405.mesa.opencl` exposes BOTH **AMD Radeon RX 6500 (16 CU)** and **Intel UHD Graphics 770 (2 CU)** under `RUSTICL_ENABLE=radeonsi,iris`.
+- **Why `nixos-24.05` is pinned in `flake.nix`:** Unstable Mesa 26 `rusticl` requires kernel DRM `>= 3.59` (Linux 6.11+) and refuses to initialize AMD RX 6500 on 5.15 (`DRM 3.42`). Pin `pkgs2405.mesa.opencl` for the AMD GPU only (`RUSTICL_ENABLE=radeonsi`). Intel UHD 770 comes from `intel-compute-runtime`. Do not set `iris`: rusticl then prints `OpenCL support via iris driver is incomplete`.
+- **Why `LD_PRELOAD` libstdc++ on `./rt_ocl` only:** Mesa 24.05 pulls in gcc 13 `libstdc++`. NEO needs `GLIBCXX_3.4.35`, so without the gcc 16 preload `dlopen(libigdrcl.so)` fails and the Intel GPU never appears. Do not export that preload for the whole shell: host glibc 2.35 cannot load it (`locale-check` / `flatpak` die). `./rt-gpu` sets it on the Nix-linked `./rt_ocl` process only.
+- **Intel row weight:** NEO reports 32 EUs for the UHD 770. `try_add_device` divides Intel (`0x8086`) counts above 16 by 16 so the split stays about 16:2 against the RX 6500.
 - **Why `./rt-gpu` builds `./rt_ocl` separately:** Ubuntu host glibc 2.35 cannot `dlopen` Nix OpenCL ICDs (glibc 2.39+), and Nix-built ELFs reference `/nix/store/.../ld-linux-x86-64.so.2` which only exists inside `nix-user-chroot` (`nix-enter`). Keeping `./rt` native and `./rt_ocl` Nix-linked prevents clashes.
 - **Makefile `-std=gnu11` & `-Wno-unused-result`:** Required when building under Nix GCC 16 (defaults to C23 strict function pointers that reject MLX's K&R `int (*)()` prototypes, and `_FORTIFY_SOURCE` warns on `libft` `write()`).
 - **Never run `make re -j4`:** `re: fclean all` runs `fclean` and `all` concurrently under `-j`, deleting freshly compiled outputs. Always run `make re` sequentially or `make fclean && make -j4`.

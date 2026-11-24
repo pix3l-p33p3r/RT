@@ -12,13 +12,14 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
       pkgs2405 = import nixpkgs-2405 { inherit system; config.allowUnfree = true; };
-      icdDir = pkgs.symlinkJoin {
-        name = "rt-opencl-vendors";
-        paths = [
-          pkgs2405.mesa.opencl
-          pkgs.intel-compute-runtime
-        ];
-      };
+      # Clover (mesa.icd) is OpenCL 1.1 and loses to rusticl. Ship rusticl + NEO only.
+      icdDir = pkgs.runCommand "rt-opencl-vendors" { } ''
+        mkdir -p $out/etc/OpenCL/vendors
+        ln -s ${pkgs2405.mesa.opencl}/etc/OpenCL/vendors/rusticl.icd \
+          $out/etc/OpenCL/vendors/rusticl.icd
+        ln -s ${pkgs.intel-compute-runtime}/etc/OpenCL/vendors/intel-neo.icd \
+          $out/etc/OpenCL/vendors/intel-neo.icd
+      '';
     in
     {
       devShells.${system}.default = pkgs.mkShell {
@@ -39,7 +40,11 @@
         shellHook = ''
           export OCL_ICD_VENDORS="${icdDir}/etc/OpenCL/vendors"
           export OPENCL_VENDOR_PATH="${icdDir}/etc/OpenCL/vendors"
-          export RUSTICL_ENABLE="radeonsi,iris"
+          # Mesa 24.05 loads gcc 13 libstdc++. NEO needs GLIBCXX_3.4.35 (gcc 16).
+          # Applied only to ./rt_ocl: host glibc 2.35 cannot load this library.
+          export RT_LIBSTDCXX="${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6"
+          # radeonsi only. iris prints the incomplete-OpenCL warning; NEO owns the iGPU.
+          export RUSTICL_ENABLE="radeonsi"
           export RT_NIX_OPENCL=1
         '';
       };

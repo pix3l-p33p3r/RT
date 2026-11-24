@@ -38,6 +38,7 @@ char	*cl_load_file(const char *path, size_t *out_len)
 	return (buf);
 }
 
+/* NEO reports Intel EUs. UHD 770 is 32 EUs; /16 keeps the old 2-vs-16 split. */
 static void	try_add_device(t_gpu *g, cl_device_id dev)
 {
 	char	name[128];
@@ -55,6 +56,8 @@ static void	try_add_device(t_gpu *g, cl_device_id dev)
 	while (++k < g->ndevs)
 		if (g->devs[k].vendor_id == vid && strcmp(g->devs[k].name, name) == 0)
 			return ;
+	if (vid == 0x8086 && cu > 16)
+		cu = cu / 16;
 	if (cu == 0)
 		cu = 1;
 	g->devs[g->ndevs].dev = dev;

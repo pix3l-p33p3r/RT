@@ -9,6 +9,6 @@ exec "$HOME/.local/bin/nix-enter" bash -lc "
       make >/dev/null
       mv -f rt rt_ocl
     fi
-    exec env RT_USE_GPU=1 ./rt_ocl \"\$@\"
+    exec env LD_PRELOAD=\"\$RT_LIBSTDCXX\${LD_PRELOAD:+:\$LD_PRELOAD}\" RT_USE_GPU=1 ./rt_ocl \"\$@\"
   ' -- $(printf '%q ' "$@")
 "
